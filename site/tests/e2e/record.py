@@ -103,11 +103,11 @@ class Hand:
         self.page.mouse.move(x, y)
         self.x, self.y = x, y
 
-    def down(self) -> None:
-        self.page.mouse.down()
+    def down(self, button: str = "left") -> None:
+        self.page.mouse.down(button=button)
 
-    def up(self) -> None:
-        self.page.mouse.up()
+    def up(self, button: str = "left") -> None:
+        self.page.mouse.up(button=button)
 
 
 def axes(page) -> dict:
@@ -160,6 +160,7 @@ def main(argv=None) -> int:
     p.add_argument("--url", default="https://keplerc.github.io/robosimstudio-website/")
     p.add_argument("--out", default="/tmp/rsw_visit")
     p.add_argument("--tour", action="store_true", help="every free drag, then two rollouts")
+    p.add_argument("--orbit", action="store_true", help="look around: orbit, drag from there, glide home")
     a = p.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -180,6 +181,49 @@ def main(argv=None) -> int:
             beats.append((round(time.time() - t0, 2), name))
 
         cast.start()
+        if a.orbit:
+            ready = "() => { const b = document.querySelector('.ball'); return b && b.style.display !== 'none' && b.style.width; }"
+            home = "() => window.__rswView.home && window.__rswView.look === 0"
+            page.goto(f"{a.url}#wipe")
+            page.wait_for_function(ready, timeout=60000)
+            hand.jump(W * 0.5, H * 0.45)
+            beat("wipe: attract"); hand.wait(2.0)
+            beat("wipe: orbit"); hand.down("right"); hand.to(W * 0.5 + 260, H * 0.45 - 60, 2.2); hand.up("right"); hand.wait(0.4)
+            beat("wipe: drag from the side")
+            bb = page.locator(".ball").bounding_box()
+            bx, by = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
+            hand.to(bx, by, 0.6); hand.down(); hand.to(bx + 120, by + 40, 1.4); hand.to(bx - 60, by - 20, 1.4); hand.up()
+            hand.to(W * 0.62, H * 0.5, 0.5)
+            beat("wipe: orbit more"); hand.down("right"); hand.to(W * 0.62 - 200, H * 0.5 + 40, 1.6); hand.up("right")
+            beat("wipe: glide home"); page.wait_for_function(home, timeout=20000); hand.wait(1.5)
+            for demo, orbit in (("gears", (-280, 50)), ("towel", (240, -40))):
+                beat(f"{demo}: pick"); pick(page, hand, demo)
+                if demo == "gears":
+                    page.wait_for_selector(".handle", state="attached", timeout=60000)
+                else:
+                    page.wait_for_function(ready, timeout=60000)
+                hand.to(W * 0.5, H * 0.45, 0.6); hand.wait(2.5)
+                beat(f"{demo}: orbit"); hand.down("right"); hand.to(W * 0.5 + orbit[0], H * 0.45 + orbit[1], 2.2); hand.up("right")
+                if demo == "gears":
+                    beat("gears: zoom")
+                    for _ in range(5):
+                        page.mouse.wheel(0, -100); hand.wait(0.08)
+                    hand.wait(1.5)
+                else:
+                    beat("towel: drag from here")
+                    bb = page.locator(".ball").bounding_box()
+                    bx, by = bb["x"] + bb["width"] / 2, bb["y"] + bb["height"] / 2
+                    hand.to(bx, by, 0.6); hand.down(); hand.to(bx - 80, by - 90, 1.3); hand.to(bx + 60, by - 40, 1.2); hand.up()
+                    hand.to(W * 0.7, H * 0.6, 0.5)
+                beat(f"{demo}: glide home"); page.wait_for_function(home, timeout=20000); hand.wait(1.5)
+            cast.stop()
+            b.close()
+            mp4 = out / "visit.mp4"
+            cast.encode(mp4)
+            (out / "timeline.json").write_text(json.dumps({"beats": beats, "frames": len(cast.stamps),
+                                                            "console": [x for x in logs if "error" in x.lower()][:20]}, indent=1))
+            print(json.dumps({"mp4": str(mp4), "bytes": mp4.stat().st_size, "frames": len(cast.stamps), "beats": beats}, indent=1))
+            return 0
         if a.tour:
             page.goto(f"{a.url}#wipe")
             page.wait_for_function("() => { const b = document.querySelector('.ball'); return b && b.style.display !== 'none' && b.style.width; }", timeout=60000)
