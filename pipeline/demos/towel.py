@@ -192,6 +192,14 @@ class Spec:
             "deform": q[self.cloth].astype(np.float32),
         }
 
+    def keep_mask(self, d: dict, static: dict) -> np.ndarray:
+        """Steps the database keeps: the cursor inside the drag box. Outside it the takes asked for
+        places the arm cannot reach (b past 0.244, a past 0.31), and the hand sat blocked with a full
+        lead: 30-50 % of each take."""
+        o, A, B = (np.asarray(v, dtype=np.float64) for v in self.drag_affine(static))
+        ab = np.linalg.lstsq(np.stack([A, B], 1), (np.asarray(d["cursor_world"], dtype=np.float64) - o).T, rcond=None)[0].T
+        return (ab[:, 0] >= BOX_A[0]) & (ab[:, 0] <= BOX_A[1]) & (ab[:, 1] >= BOX_B[0]) & (ab[:, 1] <= BOX_B[1])
+
     def setpoint_from(self, d: dict) -> np.ndarray:
         """The servo law's setpoints for a recorded take, replayed: the takes store the cursor (the
         goal) as ``setpoint``, which made the fitted plant inert (alpha 0.0009) and the page's

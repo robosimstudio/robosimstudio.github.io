@@ -277,3 +277,25 @@ body {
     width: 150px;
   }
 }
+
+/* Landscape phones: a short screen, so a smaller picker -- the full-size one covered a quarter of
+   the picture (the gear train's button, the plate rack's near stack). */
+@media (max-height: 500px) and (min-aspect-ratio: 1/1) {
+  :root {
+    --tile-w: 100px;
+    --tile-h: 56px;
+    --picker-pad: 8px;
+  }
+  #picker {
+    gap: 6px;
+    padding: 5px;
+    border-radius: 11px;
+  }
+  .tile span {
+    padding: 10px 6px 3px;
+    font-size: 10px;
+  }
+  #wordmark {
+    width: 140px;
+  }
+}

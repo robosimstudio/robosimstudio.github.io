@@ -256,11 +256,12 @@ def _frame_source(demo: str):
     db = json.loads((paths.DATA / demo / "db" / "db.json").read_text())
     tab = db["takes"]
     tp = db["take_paths"]
+    s0 = db.get("take_step0", [0] * len(tab))  # a take cut into runs: each run's first step
 
     def where(f: int):
-        for (s, n, _k), p in zip(tab, tp):
+        for (s, n, _k), p, a in zip(tab, tp, s0):
             if s <= f < s + n:
-                return Path(p), 2 * (f - s)
+                return Path(p), a + 2 * (f - s)
         raise IndexError(f)
 
     return db, where

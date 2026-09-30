@@ -52,6 +52,11 @@ def _usable(take: Path) -> tuple[dict, int]:
     return meta, n
 
 
+MIN_RUN_STEPS = 4 * 60
+"""A run cut out of a take shorter than this is dropped: the matcher keeps 1 s of lead-in and 0.33 s
+of runway off every take, so a shorter run offers it almost nothing."""
+
+
 def fit_plant(hand: list[np.ndarray], setp: list[np.ndarray]) -> dict:
     rows, rhs = [], []
     for x, s in zip(hand, setp):
@@ -145,8 +150,33 @@ def build(demo: str, rounds=("r1",), attract_round: str = "attract", n_stills: i
             continue
         d = load(t)
         d = {k: v[:n] for k, v in d.items()}
+        if hasattr(spec, "setpoint_from"):
+            # a take that recorded its goal, not the servo law's output (the towel): replay the law,
+            # over the whole take before any cut
+            d["setpoint"] = spec.setpoint_from(d)
         per_take.append((t, kind, d))
     print(f"[db] {demo}: {len(per_take)} takes ({sum(k for _, k, _ in per_take)} attract)")
+    step0 = [0] * len(per_take)  # each (sub-)take's first 60 Hz step in its recording
+    if hasattr(spec, "keep_mask"):
+        # A spec may cut stretches out of its visitor takes: the towel's asked for places out of the
+        # arm's reach, where the hand sat blocked with a full lead. A plant fitted on those reads
+        # alpha 0.0014 (0.0069 without), and a matcher that lands there stalls. The attract take
+        # stays whole: its video frames are its database frames.
+        split, s0 = [], []
+        for t, kind, d in per_take:
+            if kind == 1:
+                split.append((t, kind, d))
+                s0.append(0)
+                continue
+            ok = spec.keep_mask(d, json.loads((t.parent / "static.json").read_text()))
+            edges = np.flatnonzero(np.diff(np.r_[0, ok.astype(np.int8), 0]))
+            for a, b in zip(edges[::2], edges[1::2]):
+                if b - a >= MIN_RUN_STEPS:
+                    split.append((t, kind, {k: v[a:b] for k, v in d.items()}))
+                    s0.append(int(a))
+        kept = sum(len(d["tcp"]) for _, k, d in split if k == 0) / max(1, sum(len(d["tcp"]) for _, k, d in per_take if k == 0))
+        print(f"[db] kept {100 * kept:.0f}% of the visitor steps, in {len(split)} runs")
+        per_take, step0 = split, s0
 
     # ---------------------------------------------------- deformable, local frame
     frame_of = getattr(spec, "deform_frame", "tcp")
@@ -185,9 +215,6 @@ def build(demo: str, rounds=("r1",), attract_round: str = "attract", n_stills: i
     settled_mask = []
     start = 0
     for (t, kind, d), L30 in zip(per_take, locals_):
-        if hasattr(spec, "setpoint_from"):
-            # a take that recorded its goal, not the servo law's output (the towel): replay the law
-            d["setpoint"] = spec.setpoint_from(d)
         hand = d["tcp"][:, :3].astype(np.float64)
         hands60.append(hand)
         setp60.append(d["setpoint"][:, :3].astype(np.float64))
@@ -351,6 +378,7 @@ def build(demo: str, rounds=("r1",), attract_round: str = "attract", n_stills: i
         "plant": plant, "stills": stills.tolist(), "still_cover_mm": cover_mm, "ink": ink_meta,
         "chunks": files, "attract_takes": [str(t) for t in chosen_attract],
         "take_paths": [str(t) for t, _, _ in per_take],
+        "take_step0": step0,
         "attract_frames": [int(att_frames[0]), int(att_frames[-1]) + 1] if att_frames else None,
     }
     (out / "db.json").write_text(json.dumps(summary, indent=1))
