@@ -137,6 +137,21 @@ body {
   transform-origin: 0 50%;
 }
 
+/* Switching demos fades through the page colour, so a half-torn-down scene (a plate
+   whose robot is already gone) is never on screen. */
+#curtain {
+  position: absolute;
+  inset: 0;
+  background: #0b0c0e;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease-out;
+}
+#curtain.on {
+  opacity: 1;
+  transition-duration: 0.16s;
+}
+
 #loading {
   position: absolute;
   right: 18px;

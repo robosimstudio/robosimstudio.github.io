@@ -23,6 +23,7 @@ export interface Stage {
   stillInk: HTMLCanvasElement;
   video: HTMLVideoElement;
   overlay: HTMLElement;
+  curtain: HTMLElement;
   loading: HTMLElement;
   placement: () => Placement;
   base: (id: string) => string;
@@ -68,6 +69,7 @@ export class App {
       stillInk: $<HTMLCanvasElement>("still-ink"),
       video: $<HTMLVideoElement>("vid"),
       overlay: $("overlay"),
+      curtain: $("curtain"),
       loading: $("loading"),
       placement: () => this.placementNow,
       base: (id: string) => `${DATA}demos/${id}/`,
@@ -102,6 +104,11 @@ export class App {
 
   private async load(id: string): Promise<void> {
     const token = ++this.loadToken;
+    if (this.demo) {
+      this.stage.curtain.classList.add("on");
+      await new Promise((r) => setTimeout(r, 170));
+      if (token !== this.loadToken) return;
+    }
     this.demo?.dispose();
     this.demo = null;
     this.demoId = id;
@@ -115,7 +122,10 @@ export class App {
     (window as unknown as { __rsw: unknown }).__rsw = demo;
     this.relayout();
     await demo.start();
-    if (token === this.loadToken) this.stage.loading.classList.remove("on");
+    if (token !== this.loadToken) return;
+    this.stage.loading.classList.remove("on");
+    await presented(this.stage.video, 2500);
+    if (token === this.loadToken) this.stage.curtain.classList.remove("on");
   }
 
   private relayout(): void {
@@ -201,4 +211,20 @@ export class App {
   private markActive(id: string): void {
     for (const t of document.querySelectorAll<HTMLElement>(".tile")) t.classList.toggle("active", t.dataset.id === id);
   }
+}
+
+/** Resolves once the video has put a frame on screen (or after ``maxMs``). */
+function presented(v: HTMLVideoElement, maxMs: number): Promise<void> {
+  return new Promise((resolve) => {
+    const done = () => resolve();
+    const timer = setTimeout(done, maxMs);
+    const finish = () => {
+      clearTimeout(timer);
+      done();
+    };
+    // Firefox < 132 has no requestVideoFrameCallback
+    const rvfc = (v as { requestVideoFrameCallback?: (cb: () => void) => number }).requestVideoFrameCallback;
+    if (rvfc) rvfc.call(v, finish);
+    else (v as HTMLVideoElement).addEventListener("playing", finish, { once: true });
+  });
 }
