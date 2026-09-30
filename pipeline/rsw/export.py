@@ -383,7 +383,19 @@ def export_kinematics(sim, out: Path, frames: dict[str, np.ndarray], n_tests: in
         js = np.flatnonzero(jchild == int(arm.ee_body))
         if len(js):
             arts.add(art_of(int(js[0])))
-    joints = [j for j in range(model.joint_count) if art_of(j) in arts]
+    joints, seen = [], set()
+    for j in range(model.joint_count):
+        if art_of(j) not in arts:
+            continue
+        c = int(jchild[j])
+        if c in seen:
+            # a loop closure (the 2F-85's follower -> coupler ball): a second joint into a body the
+            # tree already reaches. The solver enforces it; FK must not let it overwrite the
+            # tree's pose with its own meaningless coordinate (33.5 mm off on the whip).
+            print(f"[export] joint {j} closes a loop onto body {c}: left out of FK")
+            continue
+        seen.add(c)
+        joints.append(j)
     bodies = sorted({int(jchild[j]) for j in joints})
     q_index: list[int] = []
     jout = []
@@ -424,6 +436,7 @@ def export_kinematics(sim, out: Path, frames: dict[str, np.ndarray], n_tests: in
     jq = np.asarray(frames["joint_q"], dtype=np.float64)
     bq = np.asarray(frames["body_q"], dtype=np.float64)
     pick = np.linspace(0, len(jq) - 1, min(n_tests, len(jq))).astype(int)
+    _rigidify_loops(doc, jq, bq, pick)
     worst_p, worst_a = 0.0, 0.0
     for i in pick:
         qr = jq[i][q_index]
@@ -435,6 +448,33 @@ def export_kinematics(sim, out: Path, frames: dict[str, np.ndarray], n_tests: in
     doc["parity"] = {"max_pos_m": worst_p, "max_ang_rad": worst_a, "frames": int(len(pick))}
     (out / "kinematics.json").write_text(json.dumps(doc))
     return doc["parity"] | {"bodies": len(bodies), "nq": len(q_index)}
+
+
+def _rigidify_loops(doc: dict, jq: np.ndarray, bq: np.ndarray, pick: np.ndarray) -> None:
+    """Make a joint fixed where its q does not describe its body but the body never moves on it.
+
+    A closed linkage (the Robotiq 2F-85's couplers: driver -> coupler -> follower, closed by an
+    equality constraint) is posed by the solver's loop closure, not by the coupler's own joint
+    coordinate, so FK from joint_q puts it off (33.5 mm on the whip, whose gripper stays shut on
+    the cable). If the body's pose relative to its parent is constant over the recording (0.2 mm,
+    0.2 deg), the joint becomes fixed at that pose; anything that moves is left to fail parity."""
+    ident = np.array([0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0])
+    for jo in doc["joints"]:
+        b, par = jo["child"], jo["parent"]
+        errs = []
+        for i in pick[:: max(1, len(pick) // 20)]:
+            poses = fk(doc, jq[i][doc["q_index"]])
+            errs.append(float(np.linalg.norm(poses[b][:3] - bq[i][b][:3])))
+        if max(errs) < 1e-3:
+            continue
+        rel = np.array([_compose(_inv(bq[i][par]) if par >= 0 else ident, bq[i][b]) for i in pick])
+        spread_p = float(np.linalg.norm(rel[:, :3] - rel[0, :3], axis=1).max())
+        spread_a = float(max(2 * np.arccos(min(1.0, abs(float(np.dot(r[3:7], rel[0, 3:7]))))) for r in rel))
+        if spread_p > 2e-4 or spread_a > np.radians(0.2):
+            continue
+        print(f"[export] joint -> body {b}: FK {max(errs) * 1e3:.1f} mm off from joint_q, rigid on its parent "
+              f"(spread {spread_p * 1e3:.2f} mm, {np.degrees(spread_a):.2f} deg): fixed at the recorded pose")
+        jo["type"], jo["X_p"], jo["X_c"], jo["axis"] = "fixed", [float(v) for v in rel[0]], [float(v) for v in ident], [0.0, 0.0, 0.0]
 
 
 def _joint_motion(t: str, axis, q: np.ndarray, qs: int) -> np.ndarray:

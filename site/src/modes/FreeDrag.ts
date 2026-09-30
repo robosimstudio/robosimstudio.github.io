@@ -350,9 +350,15 @@ export class FreeDragDemo implements Demo {
       }
     }
     if (best < 0) return;
+    // (a, b) with origin + a A + b B closest to that hand: the 2x2 normal equations
+    // (A is not a unit vector on the peel's arc)
     const { origin: o, A, B } = this.drag;
     const h = [hand[3 * best] - o[0], hand[3 * best + 1] - o[1], hand[3 * best + 2] - o[2]];
-    const to = this.drag.clamp(h[0] * A[0] + h[1] * A[1] + h[2] * A[2], h[0] * B[0] + h[1] * B[1] + h[2] * B[2]);
+    const dot = (u: ArrayLike<number>, v: ArrayLike<number>) => u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
+    const gaa = dot(A, A), gab = dot(A, B), gbb = dot(B, B), ha = dot(h, A), hb = dot(h, B);
+    const det = gaa * gbb - gab * gab;
+    if (!(Math.abs(det) > 1e-12)) return;
+    const to = this.drag.clamp((ha * gbb - hb * gab) / det, (hb * gaa - ha * gab) / det);
     this.snap = { from: [ab[0], ab[1]], to: [to[0], to[1]], t: 0 };
   }
 
@@ -589,15 +595,16 @@ export class FreeDragDemo implements Demo {
   private fade(dt: number): void {
     const { stage } = this;
     const wantStill = this.mode === "still" ? 1 : 0;
-    const rate = wantStill > this.stillAlpha ? dt / DISSOLVE_IN_S : dt / DISSOLVE_OUT_S;
-    this.stillAlpha = wantStill > this.stillAlpha ? Math.min(1, this.stillAlpha + rate) : Math.max(0, this.stillAlpha - rate);
+    // hold when there (the old "want > cur, else fade down" flickered a settled still)
+    if (wantStill > this.stillAlpha) this.stillAlpha = Math.min(wantStill, this.stillAlpha + dt / DISSOLVE_IN_S);
+    else if (wantStill < this.stillAlpha) this.stillAlpha = Math.max(wantStill, this.stillAlpha - dt / DISSOLVE_OUT_S);
     const s = this.stillAlpha;
     stage.still.style.opacity = String(s * s * (3 - 2 * s));
     stage.stillInk.style.opacity = stage.still.style.opacity;
     const wantVid = this.videoAlpha;
     const cur = Number(stage.video.style.opacity || "0");
-    const vr = dt / (wantVid > cur ? 0.5 : DISSOLVE_OUT_S);
-    stage.video.style.opacity = String(wantVid > cur ? Math.min(1, cur + vr) : Math.max(0, cur - vr));
+    if (wantVid > cur) stage.video.style.opacity = String(Math.min(wantVid, cur + dt / 0.5));
+    else if (wantVid < cur) stage.video.style.opacity = String(Math.max(wantVid, cur - dt / DISSOLVE_OUT_S));
   }
 
   // -------------------------------------------------------------- posing
@@ -785,6 +792,18 @@ export class FreeDragDemo implements Demo {
       lastSettle: this.lastSettle,
       targetWorld: this.drag.toWorld(this.target[0], this.target[1]),
       transitions: this.nTransitions,
+      // screen px (RTX frame) per metre along each drag axis, and the drag box: a harness's
+      // gestures follow the demo's own axes (the peel runs down the phone, the wipe along the bar)
+      axesPx: (() => {
+        const c = this.ballPx();
+        const w = this.drag.toWorld(this.target[0], this.target[1]);
+        const d = 0.01;
+        const pa = this.camera.project([w[0] + this.drag.A[0] * d, w[1] + this.drag.A[1] * d, w[2] + this.drag.A[2] * d]);
+        const pb = this.camera.project([w[0] + this.drag.B[0] * d, w[1] + this.drag.B[1] * d, w[2] + this.drag.B[2] * d]);
+        return { A: [(pa[0] - c[0]) / d, (pa[1] - c[1]) / d], B: [(pb[0] - c[0]) / d, (pb[1] - c[1]) / d] };
+      })(),
+      box: { a: [this.drag.aLo, this.drag.aHi], b: [this.drag.bLo, this.drag.bHi] },
+      scale: this.stage.placement().s,
       lastJump: this.lastJump,
       t: performance.now() / 1000,
     };

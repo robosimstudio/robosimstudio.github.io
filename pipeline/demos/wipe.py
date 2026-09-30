@@ -74,6 +74,10 @@ class Spec:
     def to_world(self, w, ab: np.ndarray) -> np.ndarray:
         return w.space.at(float(ab[0]), float(ab[1]), 0.0)
 
+    def drag_affine(self, static: dict) -> tuple[list, list, list]:
+        """``space.at(a, b)``: along the bar from the seat, and straight up."""
+        return static["seat"], static["along"], [0.0, 0.0, 1.0]
+
     def attract_program(self, w, hz: float = 60.0) -> np.ndarray:
         """The booth's autopilot (``Wipe.attract``): press, stroke out, back, out, lift,
         home -- at 60 mm/s -- as (a, b) cursor samples, with a hover second at each end."""

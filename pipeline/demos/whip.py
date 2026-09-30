@@ -152,6 +152,10 @@ class Spec:
     def to_world(self, arm, ab: np.ndarray) -> np.ndarray:
         return np.array([float(ab[0]), 0.0, float(ab[1])])
 
+    def drag_affine(self, static: dict) -> tuple[list, list, list]:
+        """``to_world``: the held point's x and z, in the cable's plane y = 0."""
+        return [0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, 0.0, 1.0]
+
     def attract_program(self, arm, hz: float = 60.0) -> np.ndarray:
         """The clip's own hand (``cable_wiggle/drive.py`` off ``out/track``: 8 s, x 0.02..0.31
         at z 1.485): rest at the hover point, glide to the clip's first pose, play it, glide
@@ -307,8 +311,9 @@ class Spec:
 
     def hero(self, static: dict) -> dict:
         """Three-quarters front: the ceiling UR5e, the held point's box and the whole
-        hanging cable against the whiteboard (the clip's own camera leaves the hand out)."""
-        return {"look_at": [0.12, 0.0, 1.35], "eye": [0.95, -2.35, 1.45], "fov_y": 46.0}
+        hanging cable against the whiteboard (the clip's own camera leaves the hand out).
+        fov 40 on ``rsw camera`` sheets (2026-09-30): the 5 mm cable is a hairline at 46."""
+        return {"look_at": [0.12, 0.0, 1.35], "eye": [0.95, -2.35, 1.45], "fov_y": 40.0}
 
     # --------------------------------------------------------------- probe
     def probe_workspace(self, arm, xs=None, zs=None, leans_deg=(15.0, 27.0, 38.0)) -> dict:

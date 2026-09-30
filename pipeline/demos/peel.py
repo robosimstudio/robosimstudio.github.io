@@ -18,6 +18,10 @@ from rsw.gestures import Box, GestureConfig
 ID = "peel"
 
 
+A_VISIBLE = 0.26
+"""How far down the arc the visitor (and the idle loop) pulls: past the full peel (0.234, from the
+09-30 attract take) with room for the coast, and inside the frame."""
+
 class Spec:
     id = ID
     deform_frame = "world"
@@ -86,12 +90,19 @@ class Spec:
     def hover_ab(self, peel) -> np.ndarray:
         return np.array([0.0, 0.0])
 
+    def drag_affine(self, static: dict) -> tuple[list, list, list]:
+        """``Peel.point(run, yoff)`` = tab - u run + n (ARC_LIFT + rise run) + y yoff: down the
+        face and lifting as it goes, and across."""
+        tab, u, n, y = (np.asarray(static[k], dtype=np.float64) for k in ("tab", "u", "n", "y"))
+        origin = tab + n * float(static["arc_lift"])
+        return origin.tolist(), (-u + n * float(static["rise"])).tolist(), y.tolist()
+
     def attract_program(self, peel, hz: float = 60.0) -> np.ndarray:
         """The booth's autopilot (``Peel.attract``): the whole film at the routine's own speed,
         straight down the arc, with a second's rest before and two after. The idle loop's seam
         is a fresh film, as at the booth (``new_stripe`` lays a new one)."""
         step = float(peel.max_step)
-        run_max = float(self.pl.RUN_MAX)
+        run_max = min(float(self.pl.RUN_MAX), A_VISIBLE)
         runs = np.minimum(np.arange(0.0, run_max + step, step), run_max)
         ab = np.stack([runs, np.zeros_like(runs)], axis=1)
         return np.concatenate([np.repeat(ab[:1], int(hz), axis=0), ab, np.repeat(ab[-1:], int(2 * hz), axis=0)])
@@ -165,15 +176,22 @@ class Spec:
         return None
 
     def hero(self, static: dict) -> dict:
-        """The booth's peel view (``wipe_phone.peel_view``): straight onto the tilted
-        phone face from over the arms' shoulders, aimed a little down the face; fov 34
-        so the phone fills the frame. Chosen on ``rsw camera`` sheets (2026-09-30): every
-        side or three-quarter view (+-y, 0.45-0.55 m out) sat inside an arm's links --
-        the two YAMs flank the phone -- so the lift can only be read face-on."""
-        tab, u, n = (np.asarray(static[k], dtype=np.float64) for k in ("tab", "u", "n"))
-        look = tab - u * (0.0735 + 0.06)
-        eye = look + 1.1 * (n * 0.40 + np.array([0.0, 0.0, 0.05]))
-        return {"look_at": look.tolist(), "eye": eye.tolist(), "fov_y": 34.0}
+        """The booth's peel view (``wipe_phone.peel_view``): straight onto the tilted phone face
+        from over the arms' shoulders, aimed at the middle of the run and pulled back to fov 38 so
+        the whole run to A_VISIBLE stays in frame (the ball ends at y 967 of 1080; at fov 34 it
+        left the frame at a 0.225, before the film was off). Chosen on ``rsw camera`` sheets
+        (2026-09-30): every side or three-quarter view (+-y, 0.45-0.55 m out) sat inside an arm's
+        links -- the two YAMs flank the phone -- so the lift can only be read face-on."""
+        origin, A, _ = (np.asarray(v, dtype=np.float64) for v in self.drag_affine(static))
+        n = np.asarray(static["n"], dtype=np.float64)
+        look = origin + A * 0.13  # the middle of the peel's run, [0, A_VISIBLE]
+        eye = look + 1.25 * (n * 0.40 + np.array([0.0, 0.0, 0.05]))
+        return {"look_at": look.tolist(), "eye": eye.tolist(), "fov_y": 38.0}
+
+    def drag_box(self, static: dict) -> tuple[list, list]:
+        """The run the visitor can pull, [0, A_VISIBLE]: the film is off by 0.234, and the booth's
+        RUN_MAX (0.36) takes the ball off the bottom of the frame."""
+        return [0.0, A_VISIBLE], list(static["box"]["b"])
 
     def static_meta(self, env, peel) -> dict:
         law = peel.law

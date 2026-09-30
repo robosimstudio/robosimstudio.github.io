@@ -95,7 +95,8 @@ def _webp(args) -> None:
     src, dst, q = args
     from PIL import Image
 
-    if Path(dst).exists():
+    # keyed by name (s0000.webp), so a re-rendered source must win over the cached conversion
+    if Path(dst).exists() and Path(dst).stat().st_mtime >= Path(src).stat().st_mtime:
         return
     Image.open(src).convert("RGB").save(dst, format="WEBP", quality=q, method=6)
 
@@ -121,6 +122,7 @@ def _roi(cam: dict, pts: np.ndarray, margin: float = 0.22) -> list[int]:
 def assemble_free(demo: str) -> dict:
     from demos import load as load_spec
 
+    spec = load_spec(demo)
     D = paths.DATA / demo
     out = OUT / "demos" / demo
     if out.exists():
@@ -182,16 +184,13 @@ def assemble_free(demo: str) -> dict:
             "hand_quat": static["hand_quat"],
         },
         "drag": {
-            "origin": static["seat"],
-            "A": static["along"],
-            "B": [0.0, 0.0, 1.0],
-            "a": static["box"]["a"],
-            "b": static["box"]["b"],
+            **dict(zip(("origin", "A", "B"), spec.drag_affine(static))),
+            **dict(zip(("a", "b"), spec.drag_box(static) if hasattr(spec, "drag_box") else (static["box"]["a"], static["box"]["b"]))),
             "hover": static["hover_ab"],
             "coast_tau": 0.3,
             "v_max": 1.5,
         },
-        "features": _weigh(db["features"], float(getattr(load_spec(demo), "hp_scale", HP_SCALE))),
+        "features": _weigh(db["features"], float(getattr(spec, "hp_scale", HP_SCALE))),
         "match": {"every_frames": 3, "accept_ratio": 0.85, "accept_margin": 0.05, "min_gap_frames": 6,
                   "same_take_window": 15, "min_runway": 10, "start_guard": 30},
         "settle": {"enter_speed": 0.005, "enter_s": 0.15, "exit_speed": 0.015, "max_wait_s": 1.5, "dissolve_s": 0.4},
@@ -257,7 +256,21 @@ def assemble_track(demo: str) -> dict:
         files["poster"] = _put(D / "tiles" / "poster.webp", out, "poster", ".webp")
     from . import rssb
 
-    px = rssb.read(D / "track" / "paths.rssb.gz")[0]["ee_px"].reshape(-1, 2)
+    pa = rssb.read(D / "track" / "paths.rssb.gz")[0]
+    ee_px = pa["ee_px"].astype(np.float64)
+    # as the page does: a hand beside or behind the camera projects to nonsense, and counts for
+    # nothing (the conduit's right arm rises past the close camera between strokes)
+    w2c = np.linalg.inv(np.asarray(tr["camera"]["cam_to_world_cv"], dtype=np.float64).reshape(4, 4, order="F"))
+    ew = pa["ee_world"].astype(np.float64)
+    depth = np.einsum("ij,nhj->nhi", w2c[:3, :3], ew)[..., 2] + w2c[2, 3]
+    ok = (depth > 0.08) & (ee_px[..., 0] > -960) & (ee_px[..., 0] < 2880) & (ee_px[..., 1] > -540) & (ee_px[..., 1] < 1620)
+    ee_px[~ok] = np.nan
+    # an arm whose hand hardly travels on screen in the take gets no handle (the weave's left
+    # arm holds still while the right one routes the cable)
+    travel = np.nansum(np.linalg.norm(np.diff(ee_px, axis=0), axis=2), axis=0)
+    show = [int(h) for h in np.flatnonzero(travel > 60.0)] or list(range(ee_px.shape[1]))
+    px = ee_px[:, show].reshape(-1, 2)
+    px = px[np.isfinite(px).all(axis=1)]
     x0, x1 = np.percentile(px[:, 0], [1, 99])
     y0, y1 = np.percentile(px[:, 1], [1, 99])
     mx, my = (x1 - x0) * 0.25 + 120, (y1 - y0) * 0.25 + 140
@@ -269,7 +282,7 @@ def assemble_track(demo: str) -> dict:
         "id": demo, "title": TITLES.get(demo, demo), "kind": "track", "fps": 30, "frames": tr["frames"],
         "camera": cam, "nodes": exp["nodes"], "moving": exp["moving"],
         "look": look_from_rtx(json.loads((D / "export" / "look_rtx.json").read_text()), D),
-        "track": {"handles": tr["handles"]}, "roi": roi, "files": files,
+        "track": {"handles": tr["handles"], "show": show, "travel_px": [round(float(t)) for t in travel]}, "roi": roi, "files": files,
     }
     (out / "manifest.json").write_text(json.dumps(manifest, separators=(",", ":")))
     return {"demo": demo, "files": len(list(out.rglob("*"))), "bytes": sum(q.stat().st_size for q in out.rglob("*") if q.is_file())}

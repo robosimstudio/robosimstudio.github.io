@@ -69,34 +69,41 @@ def ball_center(page) -> tuple[float, float]:
 
 
 def run_trial(page, rng, span: float) -> tuple[list[dict], float]:
-    """One visitor: grab, reach, scrub, hold, flick-release, wait. Returns samples and release time."""
+    """One visitor, in the demo's own drag coordinates (a along its main axis, b across):
+    grab, reach a random point of the box (10 % overshoot, then the correction), scrub along a,
+    hold with tremor, flick along a and release, wait. ``span`` is unused, kept for the CLI."""
+    del span
+    st = json.loads(page.evaluate(STATE))
+    ax = st["axesPx"]
+    sc = float(st["scale"])
+    (alo, ahi), (blo, bhi) = st["box"]["a"], st["box"]["b"]
+    a0, b0 = st["target"]
     tr = Trial(page, rng)
     bx, by = ball_center(page)
+
+    def px(a: float, b: float) -> tuple[float, float]:
+        return (bx + ((a - a0) * ax["A"][0] + (b - b0) * ax["B"][0]) * sc,
+                by + ((a - a0) * ax["A"][1] + (b - b0) * ax["B"][1]) * sc)
+
     tr.x, tr.y = bx + 60, by + 60
     page.mouse.move(tr.x, tr.y)
     tr.move(bx, by, 0.4)
     page.mouse.down()
     tr.held = True
-    # a Fitts reach with 10 % overshoot, then the correction
-    ang = rng.uniform(0, 2 * math.pi)
-    dist = rng.uniform(0.3, 1.0) * span
-    gx, gy = bx + dist * math.cos(ang), by + 0.5 * dist * math.sin(ang)
-    tr.move(bx + 1.1 * (gx - bx), by + 1.1 * (gy - by), rng.uniform(0.35, 0.9))
-    tr.move(gx, gy, 0.25)
+    ga, gb = rng.uniform(alo, ahi), rng.uniform(blo, bhi)
+    oa, ob = a0 + 1.1 * (ga - a0), b0 + 1.1 * (gb - b0)
+    tr.move(*px(oa, ob), rng.uniform(0.35, 0.9))
+    tr.move(*px(ga, gb), 0.25)
     tr.wait(0.3)
-    # a scrub along the screen's horizontal
-    amp, hz = rng.uniform(0.25, 0.7) * span, rng.uniform(0.5, 1.5)
-    cx = tr.x
+    amp, hz = rng.uniform(0.15, 0.4) * (ahi - alo), rng.uniform(0.5, 1.5)
+    ca = float(np.clip(ga, alo + amp, ahi - amp)) if ahi - alo > 2 * amp else 0.5 * (alo + ahi)
     for _ in range(3):
-        tr.move(cx + amp, tr.y, 0.5 / hz)
-        tr.move(cx - amp, tr.y, 0.5 / hz)
-    tr.move(cx, tr.y, 0.25 / hz)
-    # a hold with tremor
+        tr.move(*px(ca + amp, gb), 0.5 / hz)
+        tr.move(*px(ca - amp, gb), 0.5 / hz)
+    tr.move(*px(ca, gb), 0.25 / hz)
     tr.move(tr.x, tr.y, rng.uniform(1.0, 2.0), tremor=1.5)
-    # a flick and release
-    fang = rng.uniform(0, 2 * math.pi)
-    fl = rng.uniform(0.3, 0.6) * span
-    tr.move(tr.x + fl * math.cos(fang), tr.y + 0.4 * fl * math.sin(fang), rng.uniform(0.12, 0.22))
+    fa = ca + rng.choice([-1.0, 1.0]) * rng.uniform(0.2, 0.4) * (ahi - alo)
+    tr.move(*px(fa, gb), rng.uniform(0.12, 0.22))
     page.mouse.up()
     tr.held = False
     released = tr.samples[-1]["wall"]

@@ -32,6 +32,8 @@ export class TrackDemo implements Demo {
   private t = 0;
   private scrubber: Scrubber | null = null;
   private handles: HTMLDivElement[] = [];
+  /** The handles a visitor can take: an arm that never moves in the take has none. */
+  private show: number[] = [];
   private grab: { handle: number; relative: boolean; lastPx: [number, number] } | null = null;
   private lastInput = 0;
   private videoAlpha = 1;
@@ -75,8 +77,25 @@ export class TrackDemo implements Demo {
     const px = paths.arrays.ee_px;
     this.eePx = px.data as Float32Array;
     this.H = px.shape[1];
+    // A hand beside or behind the camera projects to nonsense (the conduit's right arm rises
+    // past the close camera between strokes: x -17566 px), and behind it mirrors onto the frame.
+    // Such samples carry no handle and are no scrub target (NaN drops out of the search).
+    const world = paths.arrays.ee_world?.data as Float32Array | undefined;
+    if (world) {
+      const p: [number, number, number] = [0, 0, 0];
+      for (let i = 0; i < this.N * this.H; i++) {
+        this.camera.project([world[3 * i], world[3 * i + 1], world[3 * i + 2]], p);
+        const u = this.eePx[2 * i], v = this.eePx[2 * i + 1];
+        if (!(p[2] > 0.08) || u < -960 || u > 2880 || v < -540 || v > 1620) {
+          this.eePx[2 * i] = Number.NaN;
+          this.eePx[2 * i + 1] = Number.NaN;
+        }
+      }
+    }
     this.scrubber = new Scrubber(this.eePx, this.N, this.H, { fps: 30 });
-    for (let h = 0; h < this.H; h++) {
+    const track = (this.m.track ?? {}) as { show?: number[] };
+    this.show = (track.show ?? [...Array(this.H).keys()]).filter((h) => h >= 0 && h < this.H);
+    for (let k = 0; k < this.show.length; k++) {
       const d = document.createElement("div");
       d.className = "handle";
       stage.overlay.appendChild(d);
@@ -91,8 +110,9 @@ export class TrackDemo implements Demo {
     const f = this.currentFrame();
     let best = -1;
     let bestD = Infinity;
-    for (let h = 0; h < this.H; h++) {
+    for (const h of this.show) {
       const u = this.eePx[(f * this.H + h) * 2];
+      if (Number.isNaN(u)) continue;
       const v = this.eePx[(f * this.H + h) * 2 + 1];
       const d = Math.hypot(rtx[0] - u, rtx[1] - v) * this.stage.placement().s;
       if (d < bestD) {
@@ -101,7 +121,7 @@ export class TrackDemo implements Demo {
       }
     }
     const near = bestD <= (e.pointerType === "touch" ? 40 : 24);
-    this.grab = { handle: near ? best : 0, relative: !near, lastPx: [rtx[0], rtx[1]] };
+    this.grab = { handle: near ? best : (this.show[0] ?? 0), relative: !near, lastPx: [rtx[0], rtx[1]] };
     this.t = f;
     this.enterScrub();
   }
@@ -179,7 +199,10 @@ export class TrackDemo implements Demo {
     if (!this.ready) return;
     const v = this.stage.video;
     const cur = Number(v.style.opacity || "0");
-    v.style.opacity = String(this.videoAlpha > cur ? Math.min(1, cur + dt / 0.3) : Math.max(0, cur - dt / 0.15));
+    // hold when there: "want > cur, else fade down" dipped a full video to 0.89 every other
+    // frame, a flicker that showed the plate (robot-less) through the playing RTX video
+    if (this.videoAlpha > cur) v.style.opacity = String(Math.min(this.videoAlpha, cur + dt / 0.3));
+    else if (this.videoAlpha < cur) v.style.opacity = String(Math.max(this.videoAlpha, cur - dt / 0.15));
     if (this.scrubber?.flick.active && !this.grab) {
       if (!this.scrubber.flick.coast(dt)) this.snap();
       else this.t = Math.min(this.N - 1, Math.max(0, this.scrubber.flick.x[0]));
@@ -213,12 +236,18 @@ export class TrackDemo implements Demo {
 
   private drawHandles(f: number): void {
     const pl = this.stage.placement();
-    for (let h = 0; h < this.H; h++) {
+    this.show.forEach((h, k) => {
       const u = this.eePx[(f * this.H + h) * 2];
       const v = this.eePx[(f * this.H + h) * 2 + 1];
+      const el = this.handles[k];
+      if (Number.isNaN(u)) {
+        el.style.visibility = "hidden";
+        return;
+      }
+      el.style.visibility = "";
       const [x, y] = toStage(pl, u, v);
-      this.handles[h].style.transform = `translate(${x}px, ${y}px)`;
-    }
+      el.style.transform = `translate(${x}px, ${y}px)`;
+    });
   }
 
   resize(p: Placement): void {
