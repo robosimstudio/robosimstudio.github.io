@@ -118,20 +118,30 @@ def _inv(a7) -> np.ndarray:
     return np.concatenate([-(_quat_matrix(qi) @ np.asarray(a7[:3])), qi])
 
 
-def _shade(points: np.ndarray, faces: np.ndarray, flat: bool) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """(points, faces, normals): flat for boxes/planes, crease-split smooth otherwise."""
+def _shade(points: np.ndarray, faces: np.ndarray, flat: bool):
+    """(points, faces, normals, source): flat for boxes/planes, crease-split smooth otherwise.
+
+    ``source[i]`` is the input vertex output vertex ``i`` was split from, so per-vertex data
+    (the mesh's own UVs) follows the split. It used not to: the UV count stopped matching the
+    split mesh, the plates fell back to box-projected UVs, and their rim art sampled white."""
     import trimesh
 
     m = trimesh.Trimesh(vertices=points, faces=faces, process=False)
     if flat:
-        tri = points[faces.reshape(-1)]
+        src = faces.reshape(-1)
         fn = np.repeat(m.face_normals, 3, axis=0)
-        return tri, np.arange(len(tri)).reshape(-1, 3), fn
+        return points[src], np.arange(len(src)).reshape(-1, 3), fn, src
     try:
-        s = trimesh.graph.smooth_shade(m, angle=np.radians(35.0))
-        return np.asarray(s.vertices), np.asarray(s.faces), np.asarray(s.vertex_normals)
+        sm = trimesh.graph.smooth_shade(m, angle=np.radians(35.0))
+        sf = np.asarray(sm.faces)
+        if sf.shape == faces.shape:
+            src = np.full(len(sm.vertices), -1, dtype=np.int64)
+            src[sf.reshape(-1)] = faces.reshape(-1)
+            if (src >= 0).all() and np.allclose(np.asarray(sm.vertices), points[src]):
+                return np.asarray(sm.vertices), sf, np.asarray(sm.vertex_normals), src
     except Exception:  # noqa: BLE001
-        return points, faces, np.asarray(m.vertex_normals)
+        pass
+    return points, faces, np.asarray(m.vertex_normals), np.arange(len(points))
 
 
 def export_scene(demo: str, sim, out: Path, moving: list[int], canon: dict) -> dict:
@@ -181,14 +191,15 @@ def export_scene(demo: str, sim, out: Path, moving: list[int], canon: dict) -> d
             continue
         pts, faces = geom
         kind = int(shape_type[s])
-        pts, faces, normals = _shade(np.asarray(pts, dtype=np.float64), np.asarray(faces, dtype=np.int64), kind in flat_types)
+        n_src = len(pts)
+        pts, faces, normals, from_src = _shade(np.asarray(pts, dtype=np.float64), np.asarray(faces, dtype=np.int64), kind in flat_types)
         finish = h.finishes.get(s) or finish_for(tuple(float(v) for v in colors[s][:3]))
         uvs = None
         if finish.texture or finish.roughness_texture:
             src = model.shape_source[s]
             src_uv = getattr(src, "uvs", None) if kind in mesh_types else None
-            if src_uv is not None and len(src_uv) == len(pts):
-                uvs = np.asarray(src_uv, dtype=np.float64)
+            if src_uv is not None and len(src_uv) == n_src:
+                uvs = np.asarray(src_uv, dtype=np.float64)[from_src]
             else:
                 uvs = box_projected_uvs(pts[faces.reshape(-1)], np.arange(faces.size).reshape(-1, 3))
                 pts, normals = pts[faces.reshape(-1)], normals[faces.reshape(-1)]
