@@ -57,6 +57,8 @@ class Spec:
     tube_color = (0.015, 0.015, 0.017)
     plans_takes = True
     match_weights = {"dm": 0.1, "dv": 0.05}
+    attract_loop_min_s = 8.0
+    """The idle video loops on its best window, not the whole take (a 117 mm jump at the seam)."""
     """The cable's shape is chaotic: matching it tightly forced jumps (harness 09-30, 4 visitor
     takes: hp 8 mm scale -> jumps 19.7/46.4 mm; hp 4 mm with these -> 11.8/27.8 mm)."""
 

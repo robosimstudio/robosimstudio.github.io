@@ -10,6 +10,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import subprocess
 from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 
@@ -247,8 +248,14 @@ def assemble_free(demo: str) -> dict:
     if "n_bonds" in static:
         manifest["peel"] = {"n_bonds": int(static["n_bonds"]), "columns": len(db.get("rows_shape", [])) or None}
     if (D / "attract" / "attract.mp4").exists():
-        files["video"] = _put(D / "attract" / "attract.mp4", out, "attract", ".mp4")
-        manifest["attract"] = {"frames": db["attract_frames"]}
+        mp4, frames = D / "attract" / "attract.mp4", list(db["attract_frames"])
+        if getattr(spec, "attract_loop_min_s", None):
+            i, j, seam = loop_window(demo, float(spec.attract_loop_min_s))
+            mp4 = _trim(mp4, i, j, D / "attract" / f"loop_{i}_{j}.mp4")
+            frames = [frames[0] + i, frames[0] + j]
+            print(f"[site] {demo}: attract loops frames {i}..{j} of {db['attract_frames'][1] - db['attract_frames'][0]}, seam {seam * 1e3:.0f} mm")
+        files["video"] = _put(mp4, out, "attract", ".mp4")
+        manifest["attract"] = {"frames": frames}
     if (D / "tiles" / "tile.mp4").exists():
         files["tile"] = _put(D / "tiles" / "tile.mp4", out, "tile", ".mp4")
         files["poster"] = _put(D / "tiles" / "poster.webp", out, "poster", ".webp")
@@ -313,6 +320,46 @@ def assemble_track(demo: str) -> dict:
     _attach_env(manifest["look"], D, out, tmp)
     (out / "manifest.json").write_text(json.dumps(manifest, separators=(",", ":")))
     return {"demo": demo, "files": len(list(out.rglob("*"))), "bytes": sum(q.stat().st_size for q in out.rglob("*") if q.is_file())}
+
+
+def loop_window(demo: str, min_s: float) -> tuple[int, int, float]:
+    """The attract take's best loop, [i, j) in 30 Hz frames at least ``min_s`` long: frame j most like
+    frame i, in cable and hand position and velocity (max point difference + hand distance). The
+    whip's full take loops with a 117 mm jump; its best window, 25 mm."""
+    from .record import load
+    from .stages import _frame_source
+
+    db, where = _frame_source(demo)
+    f0, f1 = db["attract_frames"]
+    take, s0 = where(f0)
+    d = load(take)
+    n = f1 - f0
+    P = d["deform"][s0 : s0 + 2 * n : 2].reshape(n, -1).astype(np.float64)
+    H = d["tcp"][s0 : s0 + 2 * n : 2, :3].astype(np.float64)
+    V, HV = np.gradient(P, axis=0), np.gradient(H, axis=0)
+    m = int(round(min_s * 30))
+    best = (np.inf, 0, n)
+    for i in range(n - m):
+        j = np.arange(i + m, n)
+        seam = (np.abs(P[j] - P[i]).max(axis=1) + np.linalg.norm(H[j] - H[i], axis=1)
+                + np.abs(V[j] - V[i]).max(axis=1) + np.linalg.norm(HV[j] - HV[i], axis=1))
+        k = int(np.argmin(seam))
+        if seam[k] < best[0]:
+            best = (float(seam[k]), i, int(j[k]))
+    return best[1], best[2], best[0]
+
+
+def _trim(src: Path, i: int, j: int, dst: Path) -> Path:
+    """Frames [i, j) of ``src``, re-encoded as the attract stage encodes (cached beside it)."""
+    if dst.exists() and dst.stat().st_mtime > src.stat().st_mtime:
+        return dst
+    cmd = [paths.ffmpeg(), "-y", "-loglevel", "error", "-i", str(src),
+           "-vf", f"select='between(n,{i},{j - 1})',setpts=N/FRAME_RATE/TB", "-r", "30",
+           "-c:v", "libx264", "-preset", "slow", "-crf", "21", "-g", "15", "-bf", "0", "-sc_threshold", "0",
+           "-profile:v", "high", "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709",
+           "-color_trc", "iec61966-2-1", "-movflags", "+faststart", "-an", str(dst)]
+    subprocess.run(cmd, check=True)
+    return dst
 
 
 def look_from_rtx(rig: dict, D: Path) -> dict:
