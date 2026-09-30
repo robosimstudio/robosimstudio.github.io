@@ -152,6 +152,8 @@ def _render_stage(argv: list[str], which: str) -> int:
         r = track.build(a.demo, a.gpu)
     elif which == "stills":
         r = stages.stills(a.demo, a.gpu, a.shard, a.nshards)
+    elif which == "envprobe":
+        r = stages.envprobe(a.demo, a.gpu)
     else:
         r = stages.attract(a.demo, a.gpu)
     print(f"[{which}]", json.dumps(r, default=str))
@@ -228,6 +230,7 @@ def _doctor(argv: list[str]) -> int:
 
 STAGES = {"takes": _takes, "export": _export, "camera": _camera, "db": _db, "probe": _probe, "tiles": _tiles, "site": _site, "doctor": _doctor,
           "plate": lambda a: _render_stage(a, "plate"), "stills": lambda a: _render_stage(a, "stills"),
+          "envprobe": lambda a: _render_stage(a, "envprobe"),
           "attract": lambda a: _render_stage(a, "attract"), "track": lambda a: _render_stage(a, "track")}
 
 

@@ -55,7 +55,7 @@ export class TrackDemo implements Demo {
   async start(): Promise<void> {
     const { stage, m, base } = this;
     stage.live.setCamera(m.camera);
-    stage.live.setLook(m.look ?? {});
+    stage.live.setLook(m.look ?? {}, base);
     stage.bg.src = base + m.files.plate;
     stage.still.style.opacity = "0";
     stage.bgInk.style.display = "none";

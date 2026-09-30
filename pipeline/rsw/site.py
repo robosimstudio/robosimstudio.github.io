@@ -91,6 +91,15 @@ def _deform_textures(fin: dict, out: Path) -> dict:
     return tex
 
 
+def _attach_env(look: dict, D: Path, out: Path, tmp: Path) -> None:
+    """The RTX environment probe (``rsw envprobe``), shipped for the live layer's reflections."""
+    src = D / "envprobe" / "env.png"
+    if not src.exists():
+        return
+    to_webp([(src, tmp / "env.webp")], 92)
+    look["env_map"] = _put(tmp / "env.webp", out, "env", ".webp")
+
+
 def _webp(args) -> None:
     src, dst, q = args
     from PIL import Image
@@ -147,6 +156,11 @@ def assemble_free(demo: str) -> dict:
     files["plate"] = _put(tmp / "plate.webp", out, "plate", ".webp")
 
     still_dir = D / "stills"
+    db_time = (D / "db" / "db.json").stat().st_mtime
+    stale = [p.name for p in still_dir.glob("*.png") if p.stat().st_mtime <= db_time]
+    if stale:
+        raise SystemExit(f"[site] {demo}: {len(stale)} stills predate db.json (e.g. {stale[0]}): the database was "
+                         "rebuilt after they were rendered, so they may show other frames -- re-run rsw stills")
     pairs = []
     for i in range(len(db["stills"])):
         src = still_dir / f"{i:04d}.png"
@@ -228,6 +242,7 @@ def assemble_free(demo: str) -> dict:
         files["tile"] = _put(D / "tiles" / "tile.mp4", out, "tile", ".mp4")
         files["poster"] = _put(D / "tiles" / "poster.webp", out, "poster", ".webp")
 
+    _attach_env(manifest["look"], D, out, tmp)
     hands = [rssb.read(D / "db" / c["file"])[0]["hand"][::15] for c in db["chunks"]]
     manifest["roi"] = _roi(cam, np.concatenate(hands))
     (out / "manifest.json").write_text(json.dumps(manifest, separators=(",", ":")))
@@ -284,6 +299,7 @@ def assemble_track(demo: str) -> dict:
         "look": look_from_rtx(json.loads((D / "export" / "look_rtx.json").read_text()), D),
         "track": {"handles": tr["handles"], "show": show, "travel_px": [round(float(t)) for t in travel]}, "roi": roi, "files": files,
     }
+    _attach_env(manifest["look"], D, out, tmp)
     (out / "manifest.json").write_text(json.dumps(manifest, separators=(",", ":")))
     return {"demo": demo, "files": len(list(out.rglob("*"))), "bytes": sum(q.stat().st_size for q in out.rglob("*") if q.is_file())}
 

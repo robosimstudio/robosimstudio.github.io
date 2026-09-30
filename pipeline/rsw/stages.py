@@ -167,6 +167,89 @@ def plate(demo: str, gpu: int) -> dict:
     return info
 
 
+# --------------------------------------------------------------------- envprobe
+FACES = (  # forward, up: six 90-degree views that tile the sphere
+    ((1.0, 0.0, 0.0), (0.0, 0.0, 1.0)), ((-1.0, 0.0, 0.0), (0.0, 0.0, 1.0)),
+    ((0.0, 1.0, 0.0), (0.0, 0.0, 1.0)), ((0.0, -1.0, 0.0), (0.0, 0.0, 1.0)),
+    ((0.0, 0.0, 1.0), (1.0, 0.0, 0.0)), ((0.0, 0.0, -1.0), (1.0, 0.0, 0.0)),
+)
+
+
+def equirect_from_faces(faces: list[np.ndarray], cams: list[dict], width: int = 1024) -> np.ndarray:
+    """An equirect in three.js's convention (Y-up env space; image row 0 = up) of what the six
+    faces see. The page rotates world Z-up into that space with ``environmentRotation``
+    (pi/2 about x), which three.js applies inverted: an env direction e is the world direction
+    (e_x, -e_z, e_y). Each direction samples the face it points into most, bilinearly."""
+    h = width // 2
+    v = 1.0 - (np.arange(h) + 0.5) / h
+    u = (np.arange(width) + 0.5) / width
+    theta = (v - 0.5) * np.pi
+    phi = (u - 0.5) * 2.0 * np.pi
+    th, ph = np.meshgrid(theta, phi, indexing="ij")
+    e = np.stack([np.cos(th) * np.cos(ph), np.sin(th), np.cos(th) * np.sin(ph)], axis=-1)
+    w = np.stack([e[..., 0], -e[..., 2], e[..., 1]], axis=-1)
+    fwd = np.array([f for f, _ in FACES])
+    pick = np.argmax(w @ fwd.T, axis=-1)
+    out = np.zeros((h, width, 3), dtype=np.float32)
+    for k, (img, cam) in enumerate(zip(faces, cams)):
+        m = pick == k
+        if not m.any():
+            continue
+        c2w = np.asarray(cam["cam_to_world_cv"], dtype=np.float64).reshape(4, 4, order="F")
+        pc = w[m] @ c2w[:3, :3]  # world direction -> camera (CV: x right, y down, z forward)
+        x = cam["fx"] * pc[:, 0] / pc[:, 2] + cam["cx"]
+        y = cam["fy"] * pc[:, 1] / pc[:, 2] + cam["cy"]
+        H, W = img.shape[:2]
+        x = np.clip(x, 0, W - 1.001)
+        y = np.clip(y, 0, H - 1.001)
+        x0, y0 = np.floor(x).astype(int), np.floor(y).astype(int)
+        ax, ay = (x - x0)[:, None], (y - y0)[:, None]
+        f = img.astype(np.float32)
+        out[m] = ((f[y0, x0] * (1 - ax) + f[y0, x0 + 1] * ax) * (1 - ay)
+                  + (f[y0 + 1, x0] * (1 - ax) + f[y0 + 1, x0 + 1] * ax) * ay)
+    return np.clip(out + 0.5, 0, 255).astype(np.uint8)
+
+
+def envprobe(demo: str, gpu: int, size: int = 512, lift: float = 0.10) -> dict:
+    """What the robot's surfaces reflect, as RTX renders it: six 90-degree faces from the middle
+    of the moving bodies (they and the deformable hidden, as for the plate), resampled into an
+    equirect the live layer uses as its environment. The generic RoomEnvironment reflected a
+    room this scene does not have; RTX lights the arm with its own dome, panel and walls."""
+    from demos import load as load_spec
+    from robosimstudio.core.cameras import CameraSpec
+
+    spec = load_spec(demo)
+    canon = export.canonical(demo)
+    st = spec.static() if getattr(spec, "kind", "free") == "track" else _static(demo, Path(canon["_take"]))
+    exp = _exp(demo)
+    bq0 = np.asarray(canon["body_q"], dtype=np.float64)
+    point = bq0[exp["moving"], :3].mean(axis=0) + np.array([0.0, 0.0, lift])
+    f = size / 2.0  # 90 degrees
+    cams = [CameraSpec(name=f"f{k}", width=size, height=size, fx=f, fy=f, cx=size / 2 - 0.5, cy=size / 2 - 0.5,
+                       near=0.02, far=30.0, eye=tuple(point), look_at=tuple(point + np.asarray(fw)), up=up)
+            for k, (fw, up) in enumerate(FACES)]
+    sess = render.RtxSession(demo, gpu, cams, accumulate=64, spec=spec)
+    s0 = _write_frame(spec, sess, st, canon["body_q"], canon["joint_q"], canon["deform"])
+    sess.render(s0, passes=1)
+    bq = np.asarray(canon["body_q"], dtype=np.float32).copy()
+    for b in exp["moving"]:
+        bq[b, 2] += render.HIDE_Z
+    hidden = None if canon["deform"] is None else np.asarray(canon["deform"], dtype=np.float32) + np.array([0, 0, render.HIDE_Z], dtype=np.float32)
+    s1 = _write_frame(spec, sess, st, bq, canon["joint_q"], hidden)
+    img = sess.render(s1, passes=6)
+    sess.close()
+    out = paths.demo_dir(demo, "envprobe")
+    faces = [render._u8(img[c.name]["rgb"]) for c in cams]
+    for k, fimg in enumerate(faces):
+        _png(out / f"face{k}.png", fimg)
+    camj = [render.camera_json(c) for c in cams]
+    eq = equirect_from_faces(faces, camj)
+    _png(out / "env.png", eq)
+    info = {"point": point.tolist(), "size": size, "faces": [list(map(list, fu)) for fu in FACES], "mean": float(eq.mean())}
+    (out / "envprobe.json").write_text(json.dumps(info, indent=1))
+    return info
+
+
 # ----------------------------------------------------------------------- stills
 def _frame_source(demo: str):
     """db frame -> (take path, 60 Hz step)."""
@@ -198,10 +281,14 @@ def stills(demo: str, gpu: int, shard: int = 0, nshards: int = 1, accumulate: in
     th.start()
     cache: dict[str, dict] = {}
     done = 0
+    # A still is filed under its index in db.json's still list, and a rebuilt database renumbers
+    # frames: an image older than db.json may show another moment than the frame the page settles
+    # on (the wipe's first stills did: the arm's elbow differed at the dissolve). Re-render those.
+    db_time = (paths.DATA / demo / "db" / "db.json").stat().st_mtime
     for f in frames:
         sid = db["stills"].index(f)
         dst = out / f"{sid:04d}.png"
-        if dst.exists():
+        if dst.exists() and dst.stat().st_mtime > db_time:
             continue
         take, step = where(f)
         if str(take) not in cache:

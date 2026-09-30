@@ -36,6 +36,9 @@ export interface LookJson {
   env_intensity?: number;
   shadow_radius?: number;
   shadow_opacity?: number;
+  /** RTX's own surroundings, seen from the robot's middle (``rsw envprobe``): an equirect in
+   * three.js's Y-up env space; replaces the generic RoomEnvironment once it has loaded. */
+  env_map?: string;
 }
 
 export interface DeformMaterial {
@@ -102,12 +105,27 @@ export class LiveRenderer {
     this.camera.updateMatrixWorld(true);
   }
 
-  setLook(look: LookJson): void {
+  setLook(look: LookJson, base = ""): void {
     this.renderer.toneMappingExposure = look.exposure ?? 1.0;
     const pm = new THREE.PMREMGenerator(this.renderer);
     this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
     pm.dispose();
     this.scene.environment = this.envTex;
+    if (look.env_map) {
+      const scene = this.scene;
+      new THREE.TextureLoader().load(base + look.env_map, (tex) => {
+        if (this.scene !== scene || this.envTex === null) return; // reset or disposed meanwhile
+        tex.mapping = THREE.EquirectangularReflectionMapping;
+        tex.colorSpace = THREE.SRGBColorSpace;
+        const g = new THREE.PMREMGenerator(this.renderer);
+        const rt = g.fromEquirectangular(tex);
+        g.dispose();
+        tex.dispose();
+        this.envTex?.dispose();
+        this.envTex = rt.texture;
+        this.scene.environment = this.envTex;
+      });
+    }
     this.scene.environmentIntensity = look.env_intensity ?? 0.6;
     this.scene.environmentRotation.set(Math.PI / 2, 0, 0); // RoomEnvironment is Y-up; the world is Z-up
     const h = look.hemi ?? { sky: [0.94, 0.95, 0.97], ground: [0.35, 0.34, 0.33], intensity: 0.9 };
