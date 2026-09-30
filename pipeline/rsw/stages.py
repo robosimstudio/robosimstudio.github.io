@@ -281,14 +281,20 @@ def stills(demo: str, gpu: int, shard: int = 0, nshards: int = 1, accumulate: in
     th.start()
     cache: dict[str, dict] = {}
     done = 0
-    # A still is filed under its index in db.json's still list, and a rebuilt database renumbers
-    # frames: an image older than db.json may show another moment than the frame the page settles
-    # on (the wipe's first stills did: the arm's elbow differed at the dissolve). Re-render those.
-    db_time = (paths.DATA / demo / "db" / "db.json").stat().st_mtime
+    # A still is filed under its index in db.json's still list, and a rebuilt database can renumber
+    # frames. Each image's source (take, 60 Hz step) is kept in a sidecar; one whose source no longer
+    # matches the database is rendered again, one that matches is kept.
+    side_path = out / f"sources.{shard}.json"
+    sources = still_sources(demo)
+    done_src = {}
+    for sp in out.glob("sources.*.json"):
+        done_src.update(json.loads(sp.read_text()))
+    mine = {}
     for f in frames:
         sid = db["stills"].index(f)
         dst = out / f"{sid:04d}.png"
-        if dst.exists() and dst.stat().st_mtime > db_time:
+        mine[str(sid)] = sources[sid]
+        if dst.exists() and done_src.get(str(sid)) == sources[sid]:
             continue
         take, step = where(f)
         if str(take) not in cache:
@@ -309,7 +315,18 @@ def stills(demo: str, gpu: int, shard: int = 0, nshards: int = 1, accumulate: in
     q.put(None)
     th.join()
     sess.close()
+    side_path.write_text(json.dumps(mine))
     return {"rendered": done, "shard": shard}
+
+
+def still_sources(demo: str) -> list[list]:
+    """Each still's source in the current database: [take path, 60 Hz step], by still index."""
+    db, where = _frame_source(demo)
+    out = []
+    for f in db["stills"]:
+        take, step = where(int(f))
+        out.append([str(take), int(step)])
+    return out
 
 
 # ---------------------------------------------------------------------- attract

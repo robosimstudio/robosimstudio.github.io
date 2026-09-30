@@ -39,11 +39,18 @@ def main(argv=None) -> int:
     p.add_argument("--rounds", type=int, default=2)
     a = p.parse_args(argv)
     man = json.loads((SITE / a.demo / "manifest.json").read_text())
-    db = json.loads((DATA / a.demo / "db" / "db.json").read_text())
-    stills = db["stills"]
-    pick = np.linspace(0, len(stills) - 1, a.frames).astype(int)
     plate = np.asarray(Image.open(DATA / a.demo / "plate" / "plate.png").convert("RGB"), dtype=np.float32)
-    refs = [(int(stills[i]), np.asarray(Image.open(DATA / a.demo / "stills" / f"{i:04d}.png").convert("RGB"), dtype=np.float32)) for i in pick]
+    track = man.get("kind") == "track"
+    if track:
+        # a track demo: the RTX rollout frames the track stage kept (every 30th), by video frame
+        kept = sorted((DATA / a.demo / "track" / "frames").glob("*.png"))[1:]
+        pick = np.linspace(0, len(kept) - 1, min(a.frames, len(kept))).astype(int)
+        refs = [(int(kept[i].stem), np.asarray(Image.open(kept[i]).convert("RGB"), dtype=np.float32)) for i in pick]
+    else:
+        db = json.loads((DATA / a.demo / "db" / "db.json").read_text())
+        stills = db["stills"]
+        pick = np.linspace(0, len(stills) - 1, a.frames).astype(int)
+        refs = [(int(stills[i]), np.asarray(Image.open(DATA / a.demo / "stills" / f"{i:04d}.png").convert("RGB"), dtype=np.float32)) for i in pick]
     look = dict(man["look"])
     prior = DATA / a.demo / "calib" / "look.json"
     if prior.exists():  # continue from the last fit
@@ -66,7 +73,10 @@ def main(argv=None) -> int:
         page = b.new_page(viewport={"width": 1920, "height": 1080}, device_scale_factor=1)
         page.goto(f"{a.url}#{a.demo}")
         page.add_style_tag(content="#picker,#wordmark,#overlay,#loading{display:none!important}")
-        page.wait_for_function("() => { const b = document.querySelector('.ball'); return b && b.style.width; }", timeout=120000)
+        if track:
+            page.wait_for_selector(".handle", state="attached", timeout=120000)
+        else:
+            page.wait_for_function("() => { const b = document.querySelector('.ball'); return b && b.style.width; }", timeout=120000)
         page.wait_for_timeout(2500)  # remaining chunks
 
         def shot(f: int) -> np.ndarray:

@@ -12,7 +12,7 @@ import { fetchRssb } from "../data/fetch.ts";
 import { Camera } from "../core/camera.ts";
 import { Scrubber } from "../core/scrubber.ts";
 
-type Mode = "playing" | "scrub" | "paused";
+type Mode = "playing" | "scrub" | "paused" | "calib";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Manifest = any;
 
@@ -157,6 +157,24 @@ export class TrackDemo implements Demo {
     }
   }
 
+  /** Calibration: the live layer alone at rollout frame ``f`` (video and handles hidden). */
+  showFrame(f: number): void {
+    if (!this.ready) return;
+    this.stage.video.pause();
+    this.videoAlpha = 0;
+    this.stage.video.style.opacity = "0";
+    this.mode = "calib";
+    this.t = f;
+    for (const h of this.handles) h.style.visibility = "hidden";
+    this.poseAt(f);
+  }
+
+  /** Calibration: retune the lights live. */
+  setLook(look: Record<string, unknown>): void {
+    this.stage.live.applyLook(look);
+    this.stage.live.render();
+  }
+
   private currentFrame(): number {
     if (this.mode === "playing") return Math.min(this.N - 1, Math.max(0, Math.floor(this.stage.video.currentTime * 30 + 1e-3)));
     return Math.round(this.t);
@@ -196,7 +214,7 @@ export class TrackDemo implements Demo {
   }
 
   frame(_now: number, dt: number): void {
-    if (!this.ready) return;
+    if (!this.ready || this.mode === "calib") return;
     const v = this.stage.video;
     const cur = Number(v.style.opacity || "0");
     // hold when there: "want > cur, else fade down" dipped a full video to 0.89 every other

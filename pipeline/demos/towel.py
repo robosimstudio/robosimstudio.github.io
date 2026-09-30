@@ -25,6 +25,10 @@ from rsw.gestures import Box, GestureConfig
 ID = "towel"
 TASK = "cloth_fold/towel_half"
 LATCH_PHASE = "carry"
+BOX_A, BOX_B = (-0.10, 0.28), (0.0, 0.21)
+"""The drag box: a over the towel, b up from the latch height -- where the hand actually went. The
+takes asked for a to 0.35 and b to 0.30; the arm never passed b 0.244 or a 0.31 (reach), and the
+harness stalled 40 % of the time on targets up there."""
 
 
 class Towel:
@@ -73,6 +77,16 @@ class Spec:
     deform_frame = "world"
     deform_name = "towel"
     deform_arm = "left"
+    hp_scale = 0.0063
+    match_weights = {"hv": 0.05, "fd": 3.0, "dm": 0.02, "dv": 0.01}
+    """Starting a move from rest needs frames that do so from here; with a drape's worth of shapes
+    to match too they were rare, and the hand stalled (harness 09-30: default weights stall 42 %;
+    these, favouring the predicted motion over the velocity and the cloth's shape, 11.5 %)."""
+    pca_k_max = 256
+    """A towel that folds, lifts and drapes: 128 modes left p99.9 at 11 mm (max 85), 256 at 6.5."""
+    settle_deform_speed = 0.02
+    """Some corner of a draped towel is always moving: 12 hand-still frames had the cloth under
+    5 mm/s everywhere, 1491 under 20 mm/s."""
     fresh_episode_per_take = True
     """A fresh towel each take (pre-roll ~45 s): a take can leave the cloth folded or slid off."""
 
@@ -131,7 +145,7 @@ class Spec:
 
     # ------------------------------------------------------------------ cursor
     def gesture_config(self, drv) -> GestureConfig:
-        self.box = Box(a=(-0.10, 0.35), b=(0.0, 0.30))
+        self.box = Box(a=BOX_A, b=BOX_B)
         weights = {"reach": 0.30, "flick": 0.14, "hold": 0.14, "long_hold": 0.12, "osc": 0.22, "coast": 0.08}
         return GestureConfig(box=self.box, weights=weights, v_reach=(0.05, 0.4), v_flick=(0.4, 1.0),
                              long_hold=(3.0, 6.0), osc_amp=(0.03, 0.12), osc_hz=(0.5, 1.5))
@@ -141,6 +155,9 @@ class Spec:
 
     def to_world(self, drv, ab: np.ndarray) -> np.ndarray:
         return drv.mid0 + self.A * float(ab[0]) + self.B * float(ab[1])
+
+    def drag_box(self, static: dict) -> tuple[list, list]:
+        return list(BOX_A), list(BOX_B)
 
     def drag_affine(self, static: dict) -> tuple[list, list, list]:
         return static["mid0"], static["A"], static["B"]
@@ -175,6 +192,24 @@ class Spec:
             "deform": q[self.cloth].astype(np.float32),
         }
 
+    def setpoint_from(self, d: dict) -> np.ndarray:
+        """The servo law's setpoints for a recorded take, replayed: the takes store the cursor (the
+        goal) as ``setpoint``, which made the fitted plant inert (alpha 0.0009) and the page's
+        predictor expect no motion toward a target. One hand holds the edge, so the tcp is that
+        hand and its target is the cursor itself."""
+        from robosimstudio.solvers.motion.osc import OscSetpoint
+
+        tcp = np.asarray(d["tcp"], dtype=np.float64)
+        goal = np.asarray(d["cursor_world"], dtype=np.float64)
+        law = OscSetpoint(control_dt=1.0 / 60.0)
+        law.reset(tcp[0, :3], tcp[0, 3:7])
+        out = np.zeros((len(tcp), 7))
+        for k in range(len(tcp)):
+            j = max(0, k - 1)  # observed after step k; the law at step k saw the pose before it
+            sp, _ = law.advance(tcp[j, :3], tcp[j, 3:7], goal[k], tcp[0, 3:7])
+            out[k, :3], out[k, 3:] = sp, (0.0, 0.0, 0.0, 1.0)
+        return out
+
     def gate(self, env, drv, row: dict) -> str | None:
         d = row["deform"]
         if not np.isfinite(d).all():
@@ -189,10 +224,18 @@ class Spec:
     def static_meta(self, env, drv) -> dict:
         return {
             "demo": ID, "control_hz": 1.0 / drv.dt, "mid0": drv.mid0.tolist(), "A": self.A.tolist(), "B": self.B.tolist(),
-            "box": {"a": list(self.box.a), "b": list(self.box.b)} if hasattr(self, "box") else None,
+            "box": {"a": list(BOX_A), "b": list(BOX_B)},
             "hover_ab": [0.0, 0.10], "hands": list(drv.names), "offsets": {n: drv.off[n].tolist() for n in drv.names},
             "hand_quat": drv.q0[drv.names[0]].tolist(), "cloth_particles": self.cloth.tolist(), "pre_roll_steps": self.pre_roll_steps,
+            "osc": self._osc(drv),
         }
+
+    @staticmethod
+    def _osc(drv) -> dict:
+        """The servo law's constants, for the page's predictor (no pre-limit: the cursor is the goal)."""
+        law = drv.laws[drv.names[0]]
+        return {"pos_speed": float(law.pos_speed), "pos_lead": float(law.pos_lead), "rot_speed": float(law.rot_speed),
+                "rot_lead": float(law.rot_lead), "control_dt": float(law.control_dt)}
 
     def hero(self, static: dict) -> dict:
         """From behind the holding hand, over it onto the towel: the side views have the near arm

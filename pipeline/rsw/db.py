@@ -95,7 +95,7 @@ def pca_fit(X: np.ndarray, p999_max: float = 0.0015, tail_mm: float = 0.004, tai
     _, s, vt = np.linalg.svd((fit - mean).astype(np.float64), full_matrices=False)
     V = X.shape[1] // 3
     chosen, report = min(k_max, len(vt)), []
-    for k in (8, 12, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128):
+    for k in (8, 12, 16, 24, 32, 40, 48, 56, 64, 80, 96, 112, 128, 160, 192, 224, 256):
         if k > min(k_max, len(vt)):
             break
         B = vt[:k]
@@ -174,7 +174,7 @@ def build(demo: str, rounds=("r1",), attract_round: str = "attract", n_stills: i
         locals_.append(L[::2].reshape(len(L[::2]), -1).astype(np.float32))
         worlds.append(P[::2])
     Xall = np.concatenate(locals_)
-    pca = pca_fit(Xall)
+    pca = pca_fit(Xall, k_max=int(getattr(spec, "pca_k_max", 128)))
     k = pca["k"]
     print(f"[db] PCA k={k} energy={pca['energy']:.6f} last={pca['curve'][-1]}")
 
@@ -185,6 +185,9 @@ def build(demo: str, rounds=("r1",), attract_round: str = "attract", n_stills: i
     settled_mask = []
     start = 0
     for (t, kind, d), L30 in zip(per_take, locals_):
+        if hasattr(spec, "setpoint_from"):
+            # a take that recorded its goal, not the servo law's output (the towel): replay the law
+            d["setpoint"] = spec.setpoint_from(d)
         hand = d["tcp"][:, :3].astype(np.float64)
         hands60.append(hand)
         setp60.append(d["setpoint"][:, :3].astype(np.float64))

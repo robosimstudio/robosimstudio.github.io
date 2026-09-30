@@ -161,11 +161,16 @@ def assemble_free(demo: str) -> dict:
     files["plate"] = _put(tmp / "plate.webp", out, "plate", ".webp")
 
     still_dir = D / "stills"
-    db_time = (D / "db" / "db.json").stat().st_mtime
-    stale = [p.name for p in still_dir.glob("*.png") if p.stat().st_mtime <= db_time]
+    from .stages import still_sources
+
+    rendered = {}
+    for sp in still_dir.glob("sources.*.json"):
+        rendered.update(json.loads(sp.read_text()))
+    want = still_sources(demo)
+    stale = [i for i, s in enumerate(want) if rendered.get(str(i)) != s]
     if stale:
-        raise SystemExit(f"[site] {demo}: {len(stale)} stills predate db.json (e.g. {stale[0]}): the database was "
-                         "rebuilt after they were rendered, so they may show other frames -- re-run rsw stills")
+        raise SystemExit(f"[site] {demo}: {len(stale)} stills were rendered from other frames than db.json's (e.g. still "
+                         f"{stale[0]}) -- re-run rsw stills")
     pairs = []
     for i in range(len(db["stills"])):
         src = still_dir / f"{i:04d}.png"
@@ -333,9 +338,18 @@ def look_from_rtx(rig: dict, D: Path) -> dict:
     }
 
 
+ORDER = ["wipe", "peel", "towel", "whip", "gears", "plates", "weave", "conduit", "usbc", "scissors", "crate", "syringe"]
+"""The picker's order: the free drags first, then the rollouts."""
+
+
 def write_index(demos: list[str]) -> None:
+    """Every assembled demo, in ``ORDER`` (others after): assembling one demo must not drop the rest
+    from the page (it did -- a towel-only run left the index listing the towel alone)."""
+    present = [p.parent.name for p in sorted((OUT / "demos").glob("*/manifest.json"))]
+    del demos
+    ranked = sorted(present, key=lambda d: (ORDER.index(d) if d in ORDER else len(ORDER), d))
     items = []
-    for d in demos:
+    for d in ranked:
         m = OUT / "demos" / d / "manifest.json"
         if not m.exists():
             continue

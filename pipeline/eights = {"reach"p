@@ -1,0 +1,253 @@
+"""Peel the film: rgbs/panel's VBD film off a phone, driven by virtual visitors.
+
+The booth demo's peel (``~/rss_ws/phone_demo/peel_scene.py``): the task's own
+``RoutineFilmPeel`` plays up to ``phase == "peel"`` (the left hand pinches the
+phone's corner, the right hand latches the film's tab), then a cursor takes the
+right hand along the routine's peel arc: ``a`` = run down the face (0..0.36 m),
+``b`` = sideways offset (+-20 mm). ``Peel.drive`` holds the hand to the routine's
+50 mm/s. A new film is a new episode, so every take is: reset, pre-roll, peel.
+"""
+
+from __future__ import annotations
+
+import numpy as np
+
+from rsw import paths
+from rsw.gestures import Box, GestureConfig
+
+ID = "peel"
+
+
+A_VISIBLE = 0.26
+"""How far down the arc the visitor (and the idle loop) pulls: past the full peel (0.234, from the
+09-30 attract take) with room for the coast, and inside the frame."""
+
+class Spec:
+    id = ID
+    deform_frame = "world"
+    deform_name = "film"
+    deform_arm = "right"
+    fresh_episode_per_take = True
+
+    def build(self, device=None):
+        paths.use_rss(paths.PHONE)
+        import peel_scene as pl  # noqa: F401  (phone_demo)
+        from robosimstudio_bench.envs.env import Env
+
+        self.pl = pl
+        env = Env(pl.TASK, episode=0, renderer="", device=device)
+        env.obs_render_enabled = False
+        self.env = env
+        self.dt = 1.0 / float(env.request.physics.control_hz)
+        return env
+
+    def _release(self, env, routine) -> None:
+        if routine is not None and routine.dragger is not None:
+            routine.dragger.release()
+            hooks = env.pipeline.hooks.post_solve
+            if routine.dragger.apply in hooks:
+                hooks.remove(routine.dragger.apply)
+            env.pipeline.invalidate_graph()
+
+    def pre_roll(self, env, reset: bool = False):
+        pl = self.pl
+        if reset:
+            self._release(env, getattr(self, "routine", None))
+            env.reset()
+        routine = None
+        n = 0
+        for routine in pl.pre_roll(env):
+            n += 1
+        self.routine = routine
+        peel = pl.Peel(env, routine)
+        self.film = routine.film
+        self.film_particles = np.asarray(self.film.particles, dtype=np.int64)
+        bonds = self.film.bonds
+        self.n_bonds = int(bonds.per_world or len(bonds.idx_host))
+        self.pre_roll_steps = n
+        self.lead_hist: list[float] = []
+        # the film's triangle edges and their lengths now (attached, at rest): a tear is
+        # an edge stretched well past its rest length
+        dh = env.handles.deformables[self.deform_name] if self.deform_name in env.handles.deformables else None
+        if dh is None and env.handles.deformables:
+            dh = next(iter(env.handles.deformables.values()))
+        tri = np.asarray(dh.triangles, dtype=np.int64).reshape(-1, 3)
+        e = np.concatenate([tri[:, [0, 1]], tri[:, [1, 2]], tri[:, [2, 0]]])
+        self.edges = np.unique(np.sort(e, axis=1), axis=0)
+        p0 = env.state.particle_q.numpy()[self.film_particles]
+        self.rest = np.linalg.norm(p0[self.edges[:, 0]] - p0[self.edges[:, 1]], axis=1)
+        return peel
+
+    # -------------------------------------------------------------- cursor
+    def gesture_config(self, peel) -> GestureConfig:
+        box = Box(a=(0.0, float(self.pl.RUN_MAX)), b=(-float(self.pl.ACROSS_HALF), float(self.pl.ACROSS_HALF)))
+        # A visitor pulls down, drifts sideways, pauses (the film is quasi-static,
+        # so short holds settle it), and sometimes pushes back up.
+        weights = {"reach": 0.40, "flick": 0.10, "hold": 0.22, "long_hold": 0.06, "osc": 0.14, "coast": 0.08}
+        return GestureConfig(box=box, weights=weights, v_reach=(0.01, 0.08), v_flick=(0.2, 0.8),
+                             long_hold=(2.0, 5.0), osc_amp=(0.003, 0.02))
+
+    def hover_ab(self, peel) -> np.ndarray:
+        return np.array([0.0, 0.0])
+
+    def drag_affine(self, static: dict) -> tuple[list, list, list]:
+        """``Peel.point(run, yoff)`` = tab - u run + n (ARC_LIFT + rise run) + y yoff: down the
+        face and lifting as it goes, and across."""
+        tab, u, n, y = (np.asarray(static[k], dtype=np.float64) for k in ("tab", "u", "n", "y"))
+        origin = tab + n * float(static["arc_lift"])
+        return origin.tolist(), (-u + n * float(static["rise"])).tolist(), y.tolist()
+
+    def attract_program(self, peel, hz: float = 60.0) -> np.ndarray:
+        """The booth's autopilot (``Peel.attract``): the whole film at the routine's own speed,
+        straight down the arc, with a second's rest before and two after. The idle loop's seam
+        is a fresh film, as at the booth (``new_stripe`` lays a new one)."""
+        step = float(peel.max_step)
+        run_max = min(float(self.pl.RUN_MAX), A_VISIBLE)
+        runs = np.minimum(np.arange(0.0, run_max + step, step), run_max)
+        ab = np.stack([runs, np.zeros_like(runs)], axis=1)
+        return np.concatenate([np.repeat(ab[:1], int(hz), axis=0), ab, np.repeat(ab[-1:], int(2 * hz), axis=0)])
+
+    def staircase_program(self, peel, hz: float, rng) -> np.ndarray:
+        """A visitor peeling under the one-way rule: pull 2-4 cm down the arc at 3-4.5 cm/s, hold
+        2-4 s, drifting sideways now and then and backing off within the slack, until the end of
+        the run, then a long hold. The two-way gesture takes held still almost only near the start
+        (settled frames per 3 cm bin: 1101 at the top, 16 at a 0.21, none past 0.24), so the
+        settle had no RTX still to land on along most of the peel."""
+        run_end = A_VISIBLE
+        pts = [np.array([0.0, 0.0])]
+        hold = lambda p, s: [p] * int(s * hz)  # noqa: E731
+        seq: list[np.ndarray] = hold(pts[0], 1.0)
+        a, b = 0.0, 0.0
+        while a < run_end - 1e-6:
+            a2 = min(run_end, a + rng.uniform(0.02, 0.04))
+            b2 = float(np.clip(b + (rng.uniform(-0.012, 0.012) if rng.random() < 0.4 else 0.0), -0.018, 0.018))
+            v = rng.uniform(0.03, 0.045)
+            n = max(2, int((a2 - a) / v * hz))
+            u = np.linspace(0.0, 1.0, n)[:, None]
+            k = u * u * (3 - 2 * u)
+            seq += list(np.array([a, b]) + (np.array([a2, b2]) - np.array([a, b])) * k)
+            a, b = a2, b2
+            if rng.random() < 0.25:  # a small back-off inside the one-way slack, and back
+                back = np.array([a - rng.uniform(0.003, 0.008), b])
+                seq += [back] * int(0.4 * hz) + [np.array([a, b])] * int(0.2 * hz)
+            seq += hold(np.array([a, b]), rng.uniform(2.0, 4.0))
+        seq += hold(np.array([a, b]), 3.0)
+        return np.asarray(seq, dtype=np.float64)
+
+    def pick_attract(self, takes) -> list:
+        """The autopilot take that peels furthest (all bonds broken, ideally) without a gate."""
+        import json as _json
+
+        from rsw.record import load as load_take
+
+        best, best_key = None, None
+        for t in takes:
+            meta = _json.loads((t / "meta.json").read_text())
+            if meta.get("gate"):
+                continue
+            d = load_take(t)
+            act = d["bond_active"]
+            broken = float(1.0 - act[-1].mean()) if act is not None and len(act) else 0.0
+            key = (broken < 0.99, -broken)
+            print(f"[attract] {t.parent.name}/{t.name}: broken {broken:.3f}, {len(d['t'])} steps")
+            if best_key is None or key < best_key:
+                best, best_key = t, key
+        return [best] if best is not None else []
+
+    def to_world(self, peel, ab: np.ndarray) -> np.ndarray:
+        return peel.point(float(ab[0]), float(ab[1]))
+
+    # ------------------------------------------------------------- stepping
+    def start_take(self, env, peel) -> None:
+        self.lead_hist = []
+
+    def step(self, env, peel, world: np.ndarray) -> None:
+        peel.cursor = np.asarray(world, dtype=np.float64)
+        peel.drive()
+        env.step_teleop()
+
+    def observe(self, env, peel) -> dict:
+        state = env.state
+        pos, quat = peel.ik.ee_pose(state)
+        sp, sq = peel.law.setpoint
+        bonds = self.film.bonds
+        active = np.asarray(bonds.active_rows(None), dtype=bool)[: self.n_bonds]
+        rows = np.asarray(bonds.read(0).row, dtype=np.float32)
+        front, _ = self.film.peel_front()
+        return {
+            "t": float(env.sim_time),
+            "tcp": np.concatenate([np.asarray(pos, dtype=np.float64), np.asarray(quat, dtype=np.float64)]),
+            "setpoint": np.concatenate([sp, sq]),
+            "target": np.asarray(peel.target, dtype=np.float64),
+            "joint_q": state.joint_q.numpy().astype(np.float32),
+            "body_q": state.body_q.numpy().astype(np.float32),
+            "deform": state.particle_q.numpy()[self.film_particles].astype(np.float32),
+            "bond_active": active,
+            "rows": rows,
+            "front": float(front),
+        }
+
+    def gate(self, env, peel, row: dict) -> str | None:
+        if not (np.isfinite(row["deform"]).all() and np.isfinite(row["joint_q"]).all()):
+            return "non-finite state"
+        # A diagonal peel breaks bonds down one side before any full row (so "broken
+        # ahead of the front" is a normal peel, measured 2026-09-30); a tear stretches.
+        p = row["deform"]
+        stretch = np.linalg.norm(p[self.edges[:, 0]] - p[self.edges[:, 1]], axis=1) / np.maximum(self.rest, 1e-6)
+        if float(stretch.max()) > 1.3:
+            return "film overstretched (an edge past 130 % of rest)"
+        lead = float(np.linalg.norm(row["tcp"][:3] - row["setpoint"][:3]))
+        self.lead_hist.append(lead)
+        if len(self.lead_hist) >= 30 and min(self.lead_hist[-30:]) >= 0.95 * float(peel.law.pos_lead):
+            return "arm blocked (lead saturated 0.5 s)"
+        return None
+
+    def hero(self, static: dict) -> dict:
+        """The booth's peel view (``wipe_phone.peel_view``): straight onto the tilted phone face
+        from over the arms' shoulders, aimed at the middle of the run and pulled back to fov 38 so
+        the whole run to A_VISIBLE stays in frame (the ball ends at y 967 of 1080; at fov 34 it
+        left the frame at a 0.225, before the film was off). Chosen on ``rsw camera`` sheets
+        (2026-09-30): every side or three-quarter view (+-y, 0.45-0.55 m out) sat inside an arm's
+        links -- the two YAMs flank the phone -- so the lift can only be read face-on."""
+        origin, A, _ = (np.asarray(v, dtype=np.float64) for v in self.drag_affine(static))
+        n = np.asarray(static["n"], dtype=np.float64)
+        look = origin + A * 0.13  # the middle of the peel's run, [0, A_VISIBLE]
+        eye = look + 1.25 * (n * 0.40 + np.array([0.0, 0.0, 0.05]))
+        return {"look_at": look.tolist(), "eye": eye.tolist(), "fov_y": 38.0}
+
+    settle_deform_speed = 0.02
+    """A peeled film hanging off the tab sways at a few mm/s and never passes the default 5 mm/s: the
+    end of the peel -- its climax -- had no still (0 of 450 past a 0.24)."""
+    one_way_slack = 0.01
+    """A film does not re-stick: the visitor's tab may not go back up the arc more than 1 cm behind
+    the furthest it has pulled (harness 09-30: two-way drags asked for peel histories the takes do
+    not have, and the matcher jumped 60 mm on average)."""
+
+    def drag_box(self, static: dict) -> tuple[list, list]:
+        """The run the visitor can pull, [0, A_VISIBLE]: the film is off by 0.234, and the booth's
+        RUN_MAX (0.36) takes the ball off the bottom of the frame."""
+        return [0.0, A_VISIBLE], list(static["box"]["b"])
+
+    def static_meta(self, env, peel) -> dict:
+        law = peel.law
+        return {
+            "demo": ID,
+            "control_hz": float(env.request.physics.control_hz),
+            "tab": peel.tab.tolist(),
+            "u": peel.u.tolist(),
+            "n": peel.n.tolist(),
+            "y": peel.y.tolist(),
+            "rise": float(peel.rise),
+            "arc_lift": float(self.pl._rp.ARC_LIFT),
+            "box": {"a": [0.0, float(self.pl.RUN_MAX)], "b": [-float(self.pl.ACROSS_HALF), float(self.pl.ACROSS_HALF)]},
+            "hover_ab": [0.0, 0.0],
+            "hand_quat": peel.quat.tolist(),
+            "osc": {
+                "pos_speed": float(law.pos_speed), "pos_lead": float(law.pos_lead),
+                "rot_speed": float(law.rot_speed), "rot_lead": float(law.rot_lead),
+                "control_dt": float(law.control_dt), "pre_limit": float(peel.routine.speed),
+            },
+            "film_particles": self.film_particles.tolist(),
+            "n_bonds": self.n_bonds,
+            "pre_roll_steps": int(self.pre_roll_steps),
+        }

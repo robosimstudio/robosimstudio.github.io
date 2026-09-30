@@ -68,7 +68,7 @@ def ball_center(page) -> tuple[float, float]:
     return b["x"] + b["width"] / 2, b["y"] + b["height"] / 2
 
 
-def run_trial(page, rng, span: float) -> tuple[list[dict], float]:
+def run_trial(page, rng, span: float, flick: bool = True) -> tuple[list[dict], float]:
     """One visitor, in the demo's own drag coordinates (a along its main axis, b across):
     grab, reach a random point of the box (10 % overshoot, then the correction), scrub along a,
     hold with tremor, flick along a and release, wait. ``span`` is unused, kept for the CLI."""
@@ -102,8 +102,9 @@ def run_trial(page, rng, span: float) -> tuple[list[dict], float]:
         tr.move(*px(ca - amp, gb), 0.5 / hz)
     tr.move(*px(ca, gb), 0.25 / hz)
     tr.move(tr.x, tr.y, rng.uniform(1.0, 2.0), tremor=1.5)
-    fa = ca + rng.choice([-1.0, 1.0]) * rng.uniform(0.2, 0.4) * (ahi - alo)
-    tr.move(*px(fa, gb), rng.uniform(0.12, 0.22))
+    if flick:
+        fa = ca + rng.choice([-1.0, 1.0]) * rng.uniform(0.2, 0.4) * (ahi - alo)
+        tr.move(*px(fa, gb), rng.uniform(0.12, 0.22))
     page.mouse.up()
     tr.held = False
     released = tr.samples[-1]["wall"]
@@ -158,6 +159,7 @@ def main(argv=None) -> int:
     p.add_argument("--seed", type=int, default=0)
     p.add_argument("--out", default="")
     p.add_argument("--weights", default="", help='json {group: weight} applied before the trials')
+    p.add_argument("--no-flick", action="store_true", help="let go where the hold ended (no closing flick)")
     a = p.parse_args(argv)
     rng = np.random.default_rng(a.seed)
     trials = []
@@ -175,7 +177,7 @@ def main(argv=None) -> int:
             # nothing to pull under its one-way rule)
             page.evaluate("() => window.__rsw.toAttract?.()")
             page.wait_for_timeout(int(rng.uniform(1.0, 4.0) * 1000))
-            trials.append(run_trial(page, rng, span))
+            trials.append(run_trial(page, rng, span, flick=not a.no_flick))
             print(f"[harness] {a.demo} trial {k + 1}/{a.trials}: {len(trials[-1][0])} samples", flush=True)
         b.close()
     report = {"demo": a.demo, "trials": a.trials, "seed": a.seed, "weights": a.weights or "manifest", **score(trials)}

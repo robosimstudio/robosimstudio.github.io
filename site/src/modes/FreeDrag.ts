@@ -349,9 +349,15 @@ export class FreeDragDemo implements Demo {
     const ab = this.drag.clamp(this.target[0], this.target[1]);
     const rest = this.drag.toWorld(ab[0], ab[1]);
     const hand = store.hand;
+    // a film does not re-stick: only stills at least as peeled as the film on screen (the peel's
+    // broken-bond count, as the matcher's monotone rule). The hand's position along the arc is the
+    // wrong test -- a still from a take that pulled further and backed off is as peeled as ours.
+    const broken = store.broken;
+    const brokenNow = broken ? broken[this.player!.frame] : 0;
     let best = -1;
     let bestD = SNAP_R * SNAP_R;
     for (const i of this.stillFrames!) {
+      if (broken && broken[i] < brokenNow) continue;
       const dx = hand[3 * i] - rest[0], dy = hand[3 * i + 1] - rest[1], dz = hand[3 * i + 2] - rest[2];
       const d = dx * dx + dy * dy + dz * dz;
       if (d < bestD) {
@@ -369,7 +375,6 @@ export class FreeDragDemo implements Demo {
     const det = gaa * gbb - gab * gab;
     if (!(Math.abs(det) > 1e-12)) return false;
     const to = this.drag.clamp((ha * gbb - hb * gab) / det, (hb * gaa - ha * gab) / det);
-    if (this.oneWaySlack !== null && to[0] < this.aMax - this.oneWaySlack) return false; // behind the film's front
     this.snap = { from: [ab[0], ab[1]], to: [to[0], to[1]], t: 0 };
     return true;
   }
