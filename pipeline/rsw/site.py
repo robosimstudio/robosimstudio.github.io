@@ -28,6 +28,9 @@ TITLES = {
     "plates": "Plate rack",
     "weave": "Cable weave",
     "conduit": "Thread the conduit",
+    "scissors": "Hang the scissors",
+    "usbc": "Plug in USB-C",
+    "syringe": "Dispose of the syringe",
 }
 
 
@@ -203,6 +206,7 @@ def assemble_free(demo: str) -> dict:
             "hover": static["hover_ab"],
             "coast_tau": 0.3,
             "v_max": 1.5,
+            **({"one_way_slack": float(spec.one_way_slack)} if getattr(spec, "one_way_slack", None) is not None else {}),
         },
         "features": _weigh(db["features"], float(getattr(spec, "hp_scale", HP_SCALE))),
         "match": {"every_frames": 3, "accept_ratio": 0.85, "accept_margin": 0.05, "min_gap_frames": 6,

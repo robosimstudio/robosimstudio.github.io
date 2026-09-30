@@ -17,11 +17,12 @@ def _takes(argv: list[str]) -> int:
     p.add_argument("--seconds", type=float, default=240.0)
     p.add_argument("--round", default="r1")
     p.add_argument("--attract", action="store_true", help="the demo's scripted autopilot instead of gestures")
+    p.add_argument("--program", default="gestures", help="gestures, or a named program of the spec (<name>_program)")
     a = p.parse_args(argv)
     from .takes import run_session
 
     out = paths.demo_dir(a.demo, "takes", "attract" if a.attract else a.round)
-    run_session(a.demo, out, a.seed, a.takes, a.seconds, attract=a.attract)
+    run_session(a.demo, out, a.seed, a.takes, a.seconds, attract=a.attract, program=a.program)
     return 0
 
 
@@ -160,6 +161,34 @@ def _render_stage(argv: list[str], which: str) -> int:
     return 0
 
 
+def _taskcams(argv: list[str]) -> int:
+    """The task's own camera rig, as built (run with CUDA_VISIBLE_DEVICES=<card>): a track demo's
+    hero can be one of them (``BenchTrack.HERO_CAMERA``), as the gallery chose on contact sheets."""
+    p = argparse.ArgumentParser(prog="rsw taskcams")
+    p.add_argument("--demo", required=True)
+    a = p.parse_args(argv)
+    import json
+    import math
+
+    from demos import load
+
+    sim = load(a.demo).build(device="cuda:0")
+    cams = []
+    for c in sim.cameras:
+        if int(getattr(c, "parent_body", -1) or -1) >= 0 or getattr(c, "parent_frame", None):
+            continue  # rides on a body: no fixed pose to film from
+        # today's spec states fy; the 09-05 tree's leaves it None and states fov_y
+        fy = getattr(c, "fy", None)
+        fov = math.degrees(2 * math.atan(0.5 * c.height / float(fy))) if fy else float(c.fov_y)
+        cams.append({"name": c.name, "eye": [float(v) for v in c.eye], "look_at": [float(v) for v in c.look_at],
+                     "up": [float(v) for v in c.up], "width": int(c.width), "height": int(c.height),
+                     "fov_y": fov, "xform": list(c.xform) if getattr(c, "xform", None) is not None else None})
+    out = paths.demo_dir(a.demo, "camera") / "task_cameras.json"
+    out.write_text(json.dumps(cams, indent=1))
+    print("[taskcams]", [c["name"] for c in cams], "->", out)
+    return 0
+
+
 def _probe(argv: list[str]) -> int:
     """Demo-specific feasibility probes (run with CUDA_VISIBLE_DEVICES=<card>)."""
     p = argparse.ArgumentParser(prog="rsw probe")
@@ -230,7 +259,7 @@ def _doctor(argv: list[str]) -> int:
 
 STAGES = {"takes": _takes, "export": _export, "camera": _camera, "db": _db, "probe": _probe, "tiles": _tiles, "site": _site, "doctor": _doctor,
           "plate": lambda a: _render_stage(a, "plate"), "stills": lambda a: _render_stage(a, "stills"),
-          "envprobe": lambda a: _render_stage(a, "envprobe"),
+          "envprobe": lambda a: _render_stage(a, "envprobe"), "taskcams": _taskcams,
           "attract": lambda a: _render_stage(a, "attract"), "track": lambda a: _render_stage(a, "track")}
 
 

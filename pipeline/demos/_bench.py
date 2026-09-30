@@ -25,6 +25,20 @@ class BenchTrack:
     EPISODE = "0000"
     """The episode's folder in the run (``--episodes 1:3`` records ``0001`` and ``0002``)."""
     CUT: tuple[str, ...] = ()
+    HERO_CAMERA: str | None = None
+    """A camera of the task's own rig to use as the hero (``rsw taskcams`` dumps them), made 16:9
+    with its vertical field of view kept."""
+    HERO_FOV_SCALE = 1.0
+
+    def hero(self, static: dict) -> dict:
+        if not self.HERO_CAMERA:
+            raise NotImplementedError(f"{self.id}: state a hero() or a HERO_CAMERA")
+        f = paths.DATA / self.id / "camera" / "task_cameras.json"
+        if not f.exists():
+            raise SystemExit(f"[{self.id}] no {f}: run rsw taskcams --demo {self.id} (legacy.sh for a legacy demo)")
+        cams = {c["name"]: c for c in json.loads(f.read_text())}
+        c = cams[self.HERO_CAMERA]
+        return {"look_at": c["look_at"], "eye": c["eye"], "fov_y": float(c["fov_y"]) * self.HERO_FOV_SCALE}
 
     # ------------------------------------------------------------------ the run
     def meta(self) -> dict:

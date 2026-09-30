@@ -32,7 +32,7 @@ def _visible_gpu() -> int:
 
 
 def run_session(demo: str, out_root: Path, seed: int, n_takes: int, take_seconds: float, hover_s: float = 1.0,
-                attract: bool = False) -> Path:
+                attract: bool = False, program: str = "gestures") -> Path:
     from demos import load
 
     card = _visible_gpu()
@@ -68,6 +68,10 @@ def run_session(demo: str, out_root: Path, seed: int, n_takes: int, take_seconds
         if attract:
             cursor = spec.attract_program(drv, hz)
             prim = np.full(len(cursor), 254, dtype=np.uint8)
+        elif program != "gestures":
+            # a demo's own visitor pattern (the peel's staircase: pull, hold, pull...)
+            cursor = getattr(spec, f"{program}_program")(drv, hz, np.random.default_rng(seed * 1000 + k))
+            prim = np.full(len(cursor), 253, dtype=np.uint8)
         else:
             prog = Program(cfg, seed=seed * 1000 + k, start=spec.hover_ab(drv))
             cursor, prim = prog.seconds(take_seconds)

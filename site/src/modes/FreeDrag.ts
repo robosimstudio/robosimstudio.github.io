@@ -81,6 +81,10 @@ export class FreeDragDemo implements Demo {
   private bgInk: InkComposite | null = null;
   private stillInk: InkComposite | null = null;
   private snap: { from: [number, number]; to: [number, number]; t: number } | null = null;
+  /** One-way drags (the peel: a film does not re-stick): ``a`` may not fall more than this
+   * [m] behind the furthest it has reached on this film. null = two-way. */
+  private oneWaySlack: number | null = null;
+  private aMax = Number.NEGATIVE_INFINITY;
   private stillFrames: Int32Array | null = null;
   private stillFramesN = -1;
   private nTransitions = 0; // for the harness: how many jumps, and the last one's size [m]
@@ -115,6 +119,8 @@ export class FreeDragDemo implements Demo {
     this.base = stage.base(id);
     this.camera = new Camera(manifest.camera);
     this.drag = new DragMapping(manifest.drag);
+    const slack = (manifest.drag as { one_way_slack?: number }).one_way_slack;
+    this.oneWaySlack = typeof slack === "number" ? slack : null;
     this.flick = Flick.forDrag(this.drag);
     this.settle = new Settle({
       enterSpeed: manifest.settle?.enter_speed ?? 0.005,
@@ -249,11 +255,11 @@ export class FreeDragDemo implements Demo {
     if (this.grab.mode === "absolute") {
       const px: [number, number] = [rtx[0] + this.grab.offset[0], rtx[1] + this.grab.offset[1]];
       const ab = this.drag.solveAbsolute(px, this.target, this.camera);
-      this.target = [ab[0], ab[1]];
+      this.target = this.oneWay(ab[0], ab[1]);
     } else {
       const dpx: [number, number] = [rtx[0] - this.grab.lastPx[0], rtx[1] - this.grab.lastPx[1]];
       const ab = this.drag.relative(dpx, this.target[0], this.target[1], this.camera, e.pointerType === "touch" ? 1.3 : 1.0);
-      this.target = [ab[0], ab[1]];
+      this.target = this.oneWay(ab[0], ab[1]);
     }
     this.grab.lastPx = [rtx[0], rtx[1]];
     this.flick.push(e.timeStamp / 1000, this.target[0], this.target[1]);
@@ -279,6 +285,7 @@ export class FreeDragDemo implements Demo {
     this.blender?.reset();
     const cur = store.cursor.subarray(2 * f, 2 * f + 2);
     this.target = [cur[0], cur[1]];
+    this.aMax = cur[0];
     this.targetPrev = [...this.target];
     const sp = store.setpoint.subarray(3 * f, 3 * f + 3);
     this.osc.reset([sp[0], sp[1], sp[2]], this.handQuat);
@@ -359,7 +366,17 @@ export class FreeDragDemo implements Demo {
     const det = gaa * gbb - gab * gab;
     if (!(Math.abs(det) > 1e-12)) return;
     const to = this.drag.clamp((ha * gbb - hb * gab) / det, (hb * gaa - ha * gab) / det);
+    if (this.oneWaySlack !== null && to[0] < this.aMax - this.oneWaySlack) return; // behind the film's front
     this.snap = { from: [ab[0], ab[1]], to: [to[0], to[1]], t: 0 };
+  }
+
+  /** Clamp a target to the one-way rule and advance the furthest point. */
+  private oneWay(a: number, b: number): [number, number] {
+    if (this.oneWaySlack === null) return [a, b];
+    const lo = this.aMax - this.oneWaySlack;
+    const aa = a < lo ? lo : a;
+    if (aa > this.aMax) this.aMax = aa;
+    return [aa, b];
   }
 
   private wake(): void {
@@ -371,6 +388,7 @@ export class FreeDragDemo implements Demo {
   }
 
   private toAttract(): void {
+    this.aMax = Number.NEGATIVE_INFINITY;
     const v = this.stage.video;
     v.currentTime = 0;
     void v.play().catch(() => undefined);
@@ -392,7 +410,7 @@ export class FreeDragDemo implements Demo {
     // target: the finger, a coast, or where the finger left it
     if (!this.grab && this.flick.active) {
       const still = !this.flick.coast(dt);
-      this.target = [this.flick.x[0], this.flick.x[1]];
+      this.target = this.oneWay(this.flick.x[0], this.flick.x[1]);
       if (still) this.settle.coastEnded();
     }
     const snapping = this.snap !== null;

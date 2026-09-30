@@ -169,6 +169,10 @@ def main(argv=None) -> int:
             page.evaluate(f"() => window.__rsw.setWeights({a.weights})")
         span = 0.12 * 1600
         for k in range(a.trials):
+            # each visitor meets the idle loop (for the peel: a fresh film -- a finished one leaves
+            # nothing to pull under its one-way rule)
+            page.evaluate("() => window.__rsw.toAttract?.()")
+            page.wait_for_timeout(int(rng.uniform(1.0, 4.0) * 1000))
             trials.append(run_trial(page, rng, span))
             print(f"[harness] {a.demo} trial {k + 1}/{a.trials}: {len(trials[-1][0])} samples", flush=True)
         b.close()

@@ -107,6 +107,33 @@ class Spec:
         ab = np.stack([runs, np.zeros_like(runs)], axis=1)
         return np.concatenate([np.repeat(ab[:1], int(hz), axis=0), ab, np.repeat(ab[-1:], int(2 * hz), axis=0)])
 
+    def staircase_program(self, peel, hz: float, rng) -> np.ndarray:
+        """A visitor peeling under the one-way rule: pull 2-4 cm down the arc at 3-4.5 cm/s, hold
+        2-4 s, drifting sideways now and then and backing off within the slack, until the end of
+        the run, then a long hold. The two-way gesture takes held still almost only near the start
+        (settled frames per 3 cm bin: 1101 at the top, 16 at a 0.21, none past 0.24), so the
+        settle had no RTX still to land on along most of the peel."""
+        run_end = A_VISIBLE
+        pts = [np.array([0.0, 0.0])]
+        hold = lambda p, s: [p] * int(s * hz)  # noqa: E731
+        seq: list[np.ndarray] = hold(pts[0], 1.0)
+        a, b = 0.0, 0.0
+        while a < run_end - 1e-6:
+            a2 = min(run_end, a + rng.uniform(0.02, 0.04))
+            b2 = float(np.clip(b + (rng.uniform(-0.012, 0.012) if rng.random() < 0.4 else 0.0), -0.018, 0.018))
+            v = rng.uniform(0.03, 0.045)
+            n = max(2, int((a2 - a) / v * hz))
+            u = np.linspace(0.0, 1.0, n)[:, None]
+            k = u * u * (3 - 2 * u)
+            seq += list(np.array([a, b]) + (np.array([a2, b2]) - np.array([a, b])) * k)
+            a, b = a2, b2
+            if rng.random() < 0.25:  # a small back-off inside the one-way slack, and back
+                back = np.array([a - rng.uniform(0.003, 0.008), b])
+                seq += [back] * int(0.4 * hz) + [np.array([a, b])] * int(0.2 * hz)
+            seq += hold(np.array([a, b]), rng.uniform(2.0, 4.0))
+        seq += hold(np.array([a, b]), 3.0)
+        return np.asarray(seq, dtype=np.float64)
+
     def pick_attract(self, takes) -> list:
         """The autopilot take that peels furthest (all bonds broken, ideally) without a gate."""
         import json as _json
@@ -187,6 +214,11 @@ class Spec:
         look = origin + A * 0.13  # the middle of the peel's run, [0, A_VISIBLE]
         eye = look + 1.25 * (n * 0.40 + np.array([0.0, 0.0, 0.05]))
         return {"look_at": look.tolist(), "eye": eye.tolist(), "fov_y": 38.0}
+
+    one_way_slack = 0.01
+    """A film does not re-stick: the visitor's tab may not go back up the arc more than 1 cm behind
+    the furthest it has pulled (harness 09-30: two-way drags asked for peel histories the takes do
+    not have, and the matcher jumped 60 mm on average)."""
 
     def drag_box(self, static: dict) -> tuple[list, list]:
         """The run the visitor can pull, [0, A_VISIBLE]: the film is off by 0.234, and the booth's
