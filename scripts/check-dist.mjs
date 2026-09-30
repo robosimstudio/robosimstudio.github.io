@@ -1,6 +1,7 @@
 // Gate a built site before it is pushed to GitHub Pages:
 //   - total <= 900 MB (Pages: 1 GB per site), every file <= 95 MB (git: 100 MB);
-//   - every manifest's files exist; hashed names for everything but manifests/index;
+//   - every manifest's files exist; every demo file but manifest.json has a content-hashed name
+//     (Pages caches for 10 minutes, so an unhashed name would serve stale data after a redeploy);
 //   - no LFS pointers; .nojekyll present.
 // Usage: node scripts/check-dist.mjs site/dist
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
@@ -37,6 +38,14 @@ else {
     for (const f of m.stills?.files ?? []) need.push(f);
     for (const f of m.stills?.clean ?? []) if (f) need.push(f);
     for (const f of need) if (!existsSync(join(dir, f))) problems.push(`${d.id}: missing ${f}`);
+    const walkNames = (sub) => {
+      for (const n of readdirSync(join(dir, sub))) {
+        const rel = sub ? `${sub}/${n}` : n;
+        if (statSync(join(dir, rel)).isDirectory()) walkNames(rel);
+        else if (rel !== "manifest.json" && !/\.[0-9a-f]{10}\.[a-z0-9.]+$/.test(n)) problems.push(`${d.id}: unhashed ${rel}`);
+      }
+    };
+    walkNames("");
   }
 }
 console.log(`dist: ${(total / 1e6).toFixed(1)} MB`);
