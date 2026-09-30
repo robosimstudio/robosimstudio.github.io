@@ -44,6 +44,11 @@ const FD_HORIZONS = [6, 12, 20];
 const IDLE_TO_ATTRACT_S = 20;
 const DISSOLVE_IN_S = 0.4;
 const DISSOLVE_OUT_S = 0.15;
+/** On settling, the ball eases onto the nearest RTX still's hand within this radius, so the
+ * robot comes to rest where a path-traced frame exists (the stills cover where the virtual
+ * visitors paused, not the whole box: rest points fell 9-30 mm from the nearest). */
+const SNAP_R = 0.02;
+const SNAP_S = 0.35;
 /** A fresh stripe, as the booth's ``new_stripe``: when a finger lands on a bar that is mostly clean
  * (under half the ink left), and when a finished wipe (under 5 % left) has rested this long. */
 const REINK_ON_GRAB_BELOW = 0.5;
@@ -75,6 +80,11 @@ export class FreeDragDemo implements Demo {
   private ink: InkField | null = null;
   private bgInk: InkComposite | null = null;
   private stillInk: InkComposite | null = null;
+  private snap: { from: [number, number]; to: [number, number]; t: number } | null = null;
+  private stillFrames: Int32Array | null = null;
+  private stillFramesN = -1;
+  private nTransitions = 0; // for the harness: how many jumps, and the last one's size [m]
+  private lastJump = 0;
   private reinkFade = 0; // [s] of the re-ink fade still to run, and its length
   private reinkLen = 0;
   private restClean = 0; // [s] at rest with a finished wipe
@@ -315,7 +325,39 @@ export class FreeDragDemo implements Demo {
     if (this.stillAlpha > 0) this.stillInk?.draw(I);
   }
 
+  /** Start easing the ball onto the nearest still-set hand, if one is within SNAP_R. */
+  private snapToStill(): void {
+    const store = this.store;
+    const still = store?.still;
+    if (!store || !still) return;
+    if (this.stillFramesN !== store.n) {
+      const f: number[] = [];
+      for (let i = 0; i < store.n; i++) if (still[i] >= 0) f.push(i);
+      this.stillFrames = Int32Array.from(f);
+      this.stillFramesN = store.n;
+    }
+    const ab = this.drag.clamp(this.target[0], this.target[1]);
+    const rest = this.drag.toWorld(ab[0], ab[1]);
+    const hand = store.hand;
+    let best = -1;
+    let bestD = SNAP_R * SNAP_R;
+    for (const i of this.stillFrames!) {
+      const dx = hand[3 * i] - rest[0], dy = hand[3 * i + 1] - rest[1], dz = hand[3 * i + 2] - rest[2];
+      const d = dx * dx + dy * dy + dz * dz;
+      if (d < bestD) {
+        bestD = d;
+        best = i;
+      }
+    }
+    if (best < 0) return;
+    const { origin: o, A, B } = this.drag;
+    const h = [hand[3 * best] - o[0], hand[3 * best + 1] - o[1], hand[3 * best + 2] - o[2]];
+    const to = this.drag.clamp(h[0] * A[0] + h[1] * A[1] + h[2] * A[2], h[0] * B[0] + h[1] * B[1] + h[2] * B[2]);
+    this.snap = { from: [ab[0], ab[1]], to: [to[0], to[1]], t: 0 };
+  }
+
   private wake(): void {
+    this.snap = null;
     this.settle.wake();
     this.stillIndex = -1;
     this.mode = "live";
@@ -347,7 +389,17 @@ export class FreeDragDemo implements Demo {
       this.target = [this.flick.x[0], this.flick.x[1]];
       if (still) this.settle.coastEnded();
     }
-    this.targetVel = [(this.target[0] - this.targetPrev[0]) / Math.max(dt, 1e-3), (this.target[1] - this.targetPrev[1]) / Math.max(dt, 1e-3)];
+    const snapping = this.snap !== null;
+    if (this.snap) {
+      const s = this.snap;
+      s.t = Math.min(1, s.t + dt / SNAP_S);
+      const k = s.t * s.t * (3 - 2 * s.t);
+      this.target = [s.from[0] + (s.to[0] - s.from[0]) * k, s.from[1] + (s.to[1] - s.from[1]) * k];
+      if (s.t >= 1) this.snap = null;
+    }
+    this.targetVel = snapping
+      ? [0, 0] // the predictor must not carry the easing on past the still it is easing to
+      : [(this.target[0] - this.targetPrev[0]) / Math.max(dt, 1e-3), (this.target[1] - this.targetPrev[1]) / Math.max(dt, 1e-3)];
     this.targetPrev = [...this.target];
 
     const player = this.player!;
@@ -365,12 +417,14 @@ export class FreeDragDemo implements Demo {
         }
       }
       const A = this.drag.A, B = this.drag.B, va = this.targetVel[0], vb = this.targetVel[1];
-      const speed = Math.hypot(va * A[0] + vb * B[0], va * A[1] + vb * B[1], va * A[2] + vb * B[2]);
+      // the snap's easing is the page's own motion, not the visitor's: it must not wake a settle
+      const speed = snapping ? 0 : Math.hypot(va * A[0] + vb * B[0], va * A[1] + vb * B[1], va * A[2] + vb * B[2]);
       const pred = this.predictDisp();
       const mode = this.grab ? "active" : this.settle.update(speed, pred.slice(6, 9), dt);
       if (mode === "settling" && this.mode === "live") {
         this.mode = "settling";
         this.framesSinceSearch = 99;
+        this.snapToStill();
       }
       if (this.framesSinceSearch >= (this.m.match?.every_frames ?? 3) || player.runway() < 4) this.search(pred);
       if (this.mode === "settling" && this.stillIndex >= 0) this.maybeDissolve();
@@ -488,6 +542,8 @@ export class FreeDragDemo implements Demo {
     b.transition("hand", srcH, srcHv, ha, ha.map((x, i) => (x - hb[i]) * 30));
     player.set(f);
     this.framesSinceTransition = 0;
+    this.nTransitions += 1;
+    this.lastJump = Math.hypot(ha[0] - srcH[0], ha[1] - srcH[1], ha[2] - srcH[2]);
   }
 
   private sampleAt(f: number, q: Float64Array, d: Float64Array, h: Float64Array): void {
@@ -700,6 +756,15 @@ export class FreeDragDemo implements Demo {
     this.stage.live.render();
   }
 
+  /** Harness: re-weight the matcher's feature groups by name (others keep theirs). */
+  setWeights(ws: Record<string, number>): void {
+    const m = this.matcher;
+    if (!m) return;
+    const next = this.groups.map((g) => ws[g.name] ?? g.w);
+    this.groups.forEach((g, k) => (g.w = next[k]));
+    m.setWeights(next);
+  }
+
   /** Calibration: retune the lights live. */
   setLook(look: Record<string, unknown>): void {
     this.stage.live.applyLook(look);
@@ -718,6 +783,10 @@ export class FreeDragDemo implements Demo {
       coasting: this.flick.active,
       settle: this.settle.mode,
       lastSettle: this.lastSettle,
+      targetWorld: this.drag.toWorld(this.target[0], this.target[1]),
+      transitions: this.nTransitions,
+      lastJump: this.lastJump,
+      t: performance.now() / 1000,
     };
   }
 

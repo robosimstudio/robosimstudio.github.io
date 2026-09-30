@@ -98,8 +98,8 @@ class Glb:
     # ------------------------------------------------------------- materials
     def material(self, color, finish, *, textured: bool, name: str = "") -> int:
         """A material for ``(display colour, finish)``; ``textured`` if the mesh has UVs."""
-        from robosimstudio.core.render.palette import srgb_to_linear
-        from robosimstudio_studio import finish_gltf as fg
+        from . import compat as fg
+        from .compat import srgb_to_linear
 
         image = fg._texture_image(finish.texture) if textured else None
         rough_map = fg._roughness_image(finish.roughness_texture) if textured else None

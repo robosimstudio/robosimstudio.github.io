@@ -96,6 +96,18 @@ export class Matcher {
     this.sync();
   }
 
+  /** New group weights (one per group, in order): rescales every column and rebuilds W. */
+  setWeights(ws: number[]): void {
+    if (ws.length !== this.ends.length) throw new Error(`Matcher: ${ws.length} weights for ${this.ends.length} groups`);
+    let d = 0;
+    ws.forEach((w, k) => {
+      if (!(w >= 0)) throw new Error(`Matcher: weight ${w} for group ${k}`);
+      this.scale.fill(Math.sqrt(w), d, this.ends[k]);
+      d = this.ends[k];
+    });
+    this.sync();
+  }
+
   /** Rebuild W and the blocks from the store (after ``store.append``; ``search`` does it lazily). */
   sync(): void {
     const s = this.store;

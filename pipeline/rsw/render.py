@@ -68,6 +68,7 @@ class RtxSession:
         self.spec = spec or load(demo)
         self.sim = sim or self.spec.build(device=f"cuda:{card}")
         self.cameras = list(cameras)
+        self._unpin = _pin_ovrtx(card)
         self.renderer = self.sim.make_renderer(
             "rtx", cameras=self.cameras, channels=["rgb", "depth"], accumulate=int(accumulate), quality="final"
         )
@@ -104,6 +105,32 @@ class RtxSession:
 
     def close(self) -> None:
         self.renderer.close()
+        self._unpin()
+
+
+def _pin_ovrtx(card: int):
+    """Put OVRTX's renderer on ``card`` whatever tree is loaded; returns the undo.
+
+    Today's tracer pins itself to the sim's GPU (e15a7b30, 09-10); the 09-05 gallery tree the
+    conduit and weave rebuild in does not, and there OVRTX picks its own device ("in practice
+    GPU 0"). Cards 2-4 run the live phone demos, so the choice is made here, the same way:
+    ``RendererConfig.active_cuda_gpus`` filled only where the caller left it ``None``. Kept for
+    the whole session -- the renderer may be created at the first frame, not at construction."""
+    import ovrtx
+
+    original = ovrtx.Renderer
+
+    def _on_card(*args, config=None, **kwargs):
+        if config is not None and getattr(config, "active_cuda_gpus", None) is None:
+            config.active_cuda_gpus = str(int(card))
+        return original(*args, config=config, **kwargs)
+
+    ovrtx.Renderer = _on_card
+
+    def undo() -> None:
+        ovrtx.Renderer = original
+
+    return undo
 
 
 def _u8(rgb) -> np.ndarray:

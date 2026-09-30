@@ -19,8 +19,14 @@ describe("Settle", () => {
 
   it("waits while the hand is still predicted to move 4 mm or more", () => {
     const s = new Settle();
-    for (let k = 0; k < 20; k++) expect(s.update(0, [0.003, 0.003, 0], 0.05)).toBe("active");
+    for (let k = 0; k < 11; k++) expect(s.update(0, [0.003, 0.003, 0], 0.05)).toBe("active");
     expect(s.update(0, [0.002, 0.002, 0.001], 0.05)).toBe("settling");
+  });
+
+  it("settles a target at rest for 0.6 s even if the hand is predicted to keep moving (stuck short)", () => {
+    const s = new Settle();
+    for (let k = 0; k < 11; k++) expect(s.update(0, [0.01, 0, 0], 0.05)).toBe("active");
+    expect(s.update(0, [0.01, 0, 0], 0.05)).toBe("settling");
   });
 
   it("restarts the hold when the target speeds up in between", () => {

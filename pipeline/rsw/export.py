@@ -147,7 +147,7 @@ def _shade(points: np.ndarray, faces: np.ndarray, flat: bool):
 def export_scene(demo: str, sim, out: Path, moving: list[int], canon: dict) -> dict:
     import newton
     from robosimstudio.core.render.finish import finish_for
-    from robosimstudio.core.render.uv import box_projected_uvs, planar_uvs
+    from .compat import box_projected_uvs, planar_uvs
     from robosimstudio.core.render.visual import shape_geometry
 
     model = sim.model
@@ -324,8 +324,9 @@ def look_rtx(sim) -> dict:
         "panel_size": [1.4, 0.9],
         "panel_per_key": float(rtx.LAB_PANEL_PER_KEY),
         "dome_per_ambient": float(rtx.LAB_DOME_PER_AMBIENT),
-        "tonemap": rtx.TONEMAP_OPERATOR,
-        "palette_is_display": bool(rtx.PALETTE_IS_DISPLAY),
+        # the 09-05 tree predates both (c4485d60): no tonemap stated, colours used as linear
+        "tonemap": getattr(rtx, "TONEMAP_OPERATOR", "none"),
+        "palette_is_display": bool(getattr(rtx, "PALETTE_IS_DISPLAY", False)),
         "kwargs": {k: (v if isinstance(v, (int, float, str, bool, type(None))) else str(v)) for k, v in kw.items()},
     }
 

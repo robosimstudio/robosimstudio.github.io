@@ -20,6 +20,8 @@ from rsw import paths
 class BenchTrack:
     kind = "track"
     RUN: Path
+    LEGACY = False
+    """Rebuilds only in the 09-05 gallery worktree (run its stages with ``pipeline/legacy.sh``)."""
     EPISODE = "0000"
     """The episode's folder in the run (``--episodes 1:3`` records ``0001`` and ``0002``)."""
     CUT: tuple[str, ...] = ()
@@ -46,6 +48,8 @@ class BenchTrack:
 
     # ------------------------------------------------------------------ the scene
     def build(self, device=None):
+        if self.LEGACY and paths.RSS.resolve() != (paths.WS / "wt" / "gallery").resolve():
+            raise SystemExit(f"[{self.id}] this recording rebuilds only in ~/rss_ws/wt/gallery: run pipeline/legacy.sh")
         paths.use_rss()
         from robosimstudio_bench.envs.env import Env
 

@@ -17,11 +17,14 @@ export interface SettleParams {
   enterHold: number;
   /** [m] */
   enterDisp: number;
+  /** [s] a target this long at rest settles even if the hand is still predicted to move
+   * (a hand stuck short of it, with no frame that closes the gap, would never settle). */
+  enterMaxHold: number;
   /** [m/s] */
   exitSpeed: number;
 }
 
-export const SETTLE_DEFAULTS: SettleParams = { enterSpeed: 0.005, enterHold: 0.15, enterDisp: 0.004, exitSpeed: 0.015 };
+export const SETTLE_DEFAULTS: SettleParams = { enterSpeed: 0.005, enterHold: 0.15, enterDisp: 0.004, exitSpeed: 0.015, enterMaxHold: 0.6 };
 
 export class Settle {
   mode: SettleMode = "active";
@@ -46,7 +49,8 @@ export class Settle {
     this.slow = targetSpeed < p.enterSpeed ? this.slow + dt : 0;
     // the 1e-9 absorbs the rounding of a hold summed from many small dt
     const held = this.slow >= p.enterHold - 1e-9;
-    if (held && Math.hypot(predictedDisp3[0], predictedDisp3[1], predictedDisp3[2]) < p.enterDisp) this.mode = "settling";
+    const quiet = Math.hypot(predictedDisp3[0], predictedDisp3[1], predictedDisp3[2]) < p.enterDisp;
+    if ((held && quiet) || this.slow >= p.enterMaxHold - 1e-9) this.mode = "settling";
     return this.mode;
   }
 

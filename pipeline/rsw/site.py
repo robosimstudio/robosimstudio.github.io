@@ -31,6 +31,25 @@ TITLES = {
 }
 
 
+MATCH_WEIGHTS = {"fd": 1.0, "hv": 0.6, "dm": 0.25, "dv": 0.1}
+"""Relative weights of the standardized feature groups, tuned with ``site/tests/e2e/harness.py``
+on the wipe (2026-09-30). The hand position is weighted by a physical scale instead
+(``hp_scale``: that many metres of mismatch cost one unit): standardized by its own spread
+(38 mm on the wipe), a 27 mm-away frame with a matching future beat a nearby one, and every such
+pick was a visible jump (mean 27 mm; 3.4 mm at a 4 mm scale, settles 5/12 -> 12/12)."""
+HP_SCALE = 0.004
+
+
+def _weigh(features: dict, hp_scale: float) -> dict:
+    out = json.loads(json.dumps(features))
+    for g in out["groups"]:
+        if g["name"] == "hp":
+            g["w"] = round((float(g["sigma"]) / hp_scale) ** 2, 3)
+        elif g["name"] in MATCH_WEIGHTS:
+            g["w"] = MATCH_WEIGHTS[g["name"]]
+    return out
+
+
 def _hash_name(src: Path, stem: str, suffix: str) -> str:
     h = hashlib.sha256(src.read_bytes()).hexdigest()[:10]
     return f"{stem}.{h}{suffix}"
@@ -100,6 +119,8 @@ def _roi(cam: dict, pts: np.ndarray, margin: float = 0.22) -> list[int]:
 
 
 def assemble_free(demo: str) -> dict:
+    from demos import load as load_spec
+
     D = paths.DATA / demo
     out = OUT / "demos" / demo
     if out.exists():
@@ -170,7 +191,7 @@ def assemble_free(demo: str) -> dict:
             "coast_tau": 0.3,
             "v_max": 1.5,
         },
-        "features": db["features"],
+        "features": _weigh(db["features"], float(getattr(load_spec(demo), "hp_scale", HP_SCALE))),
         "match": {"every_frames": 3, "accept_ratio": 0.85, "accept_margin": 0.05, "min_gap_frames": 6,
                   "same_take_window": 15, "min_runway": 10, "start_guard": 30},
         "settle": {"enter_speed": 0.005, "enter_s": 0.15, "exit_speed": 0.015, "max_wait_s": 1.5, "dissolve_s": 0.4},

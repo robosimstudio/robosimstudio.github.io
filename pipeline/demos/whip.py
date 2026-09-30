@@ -56,6 +56,7 @@ class Spec:
     deform_kind = "tube"
     tube_color = (0.015, 0.015, 0.017)
     plans_takes = True
+    hp_scale = 0.008  # a sparser database (0.4 s a step) of fast strokes: coarser position matching
 
     # ---------------------------------------------------------------- build
     def build(self, device=None):
