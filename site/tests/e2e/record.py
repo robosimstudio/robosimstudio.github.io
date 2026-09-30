@@ -188,7 +188,6 @@ def main(argv=None) -> int:
             beat("wipe: drag")
             free_drag(page, hand, [(0.0, -0.02, 0.5), (0.08, -0.02, 1.3), (-0.12, -0.02, 1.6), (0.10, 0.0, 1.3), (0.0, 0.06, 0.6)])
             for demo, moves in (("peel", [(0.06, 0.0, 1.5), (0.06, 0.004, 1.5), (0.05, -0.004, 1.4)]),
-                                ("whip", [(0.10, 0.0, 0.35), (-0.14, 0.0, 0.4), (0.12, 0.02, 0.4), (-0.08, 0.0, 0.35)]),
                                 ("towel", [(0.0, 0.12, 1.2), (0.18, 0.04, 1.6), (0.0, -0.10, 1.0), (-0.12, 0.05, 1.4)])):
                 beat(f"{demo}: pick"); pick(page, hand, demo)
                 page.wait_for_function("() => { const b = document.querySelector('.ball'); return b && b.style.display !== 'none' && b.style.width; }", timeout=60000)

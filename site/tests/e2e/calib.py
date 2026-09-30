@@ -49,8 +49,16 @@ def main(argv=None) -> int:
     else:
         db = json.loads((DATA / a.demo / "db" / "db.json").read_text())
         stills = db["stills"]
-        pick = np.linspace(0, len(stills) - 1, a.frames).astype(int)
-        refs = [(int(stills[i]), np.asarray(Image.open(DATA / a.demo / "stills" / f"{i:04d}.png").convert("RGB"), dtype=np.float32)) for i in pick]
+        if stills:
+            pick = np.linspace(0, len(stills) - 1, a.frames).astype(int)
+            refs = [(int(stills[i]), np.asarray(Image.open(DATA / a.demo / "stills" / f"{i:04d}.png").convert("RGB"), dtype=np.float32)) for i in pick]
+        else:
+            # no stills (the whip's cable never rests): the attract stage's kept RTX frames, which
+            # are named by their frame in the whole attract take
+            f0 = int(db["attract_frames"][0])
+            kept = sorted((DATA / a.demo / "attract" / "frames").glob("*.png"))[1:]
+            pick = np.linspace(0, len(kept) - 1, min(a.frames, len(kept))).astype(int)
+            refs = [(f0 + int(kept[i].stem), np.asarray(Image.open(kept[i]).convert("RGB"), dtype=np.float32)) for i in pick]
     look = dict(man["look"])
     prior = DATA / a.demo / "calib" / "look.json"
     if prior.exists():  # continue from the last fit

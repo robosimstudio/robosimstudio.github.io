@@ -385,14 +385,17 @@ def look_from_rtx(rig: dict, D: Path) -> dict:
     }
 
 
-ORDER = ["wipe", "peel", "towel", "whip", "gears", "plates", "weave", "conduit", "usbc", "scissors", "crate", "syringe"]
+ORDER = ["wipe", "peel", "towel", "gears", "plates", "weave", "conduit", "usbc", "scissors", "crate", "syringe"]
 """The picker's order: the free drags first, then the rollouts."""
+WITHDRAWN = {"whip"}
+"""Demos taken off the page by the user's call (the whip: 2026-09-30, "don't do this cable one with
+the UR on the roof"); ``write_index`` never lists them, even if assembled."""
 
 
 def write_index(demos: list[str]) -> None:
     """Every assembled demo, in ``ORDER`` (others after): assembling one demo must not drop the rest
     from the page (it did -- a towel-only run left the index listing the towel alone)."""
-    present = [p.parent.name for p in sorted((OUT / "demos").glob("*/manifest.json"))]
+    present = [p.parent.name for p in sorted((OUT / "demos").glob("*/manifest.json")) if p.parent.name not in WITHDRAWN]
     del demos
     ranked = sorted(present, key=lambda d: (ORDER.index(d) if d in ORDER else len(ORDER), d))
     items = []
