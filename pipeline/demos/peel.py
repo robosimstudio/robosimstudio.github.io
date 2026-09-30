@@ -86,6 +86,36 @@ class Spec:
     def hover_ab(self, peel) -> np.ndarray:
         return np.array([0.0, 0.0])
 
+    def attract_program(self, peel, hz: float = 60.0) -> np.ndarray:
+        """The booth's autopilot (``Peel.attract``): the whole film at the routine's own speed,
+        straight down the arc, with a second's rest before and two after. The idle loop's seam
+        is a fresh film, as at the booth (``new_stripe`` lays a new one)."""
+        step = float(peel.max_step)
+        run_max = float(self.pl.RUN_MAX)
+        runs = np.minimum(np.arange(0.0, run_max + step, step), run_max)
+        ab = np.stack([runs, np.zeros_like(runs)], axis=1)
+        return np.concatenate([np.repeat(ab[:1], int(hz), axis=0), ab, np.repeat(ab[-1:], int(2 * hz), axis=0)])
+
+    def pick_attract(self, takes) -> list:
+        """The autopilot take that peels furthest (all bonds broken, ideally) without a gate."""
+        import json as _json
+
+        from rsw.record import load as load_take
+
+        best, best_key = None, None
+        for t in takes:
+            meta = _json.loads((t / "meta.json").read_text())
+            if meta.get("gate"):
+                continue
+            d = load_take(t)
+            act = d["bond_active"]
+            broken = float(1.0 - act[-1].mean()) if act is not None and len(act) else 0.0
+            key = (broken < 0.99, -broken)
+            print(f"[attract] {t.parent.name}/{t.name}: broken {broken:.3f}, {len(d['t'])} steps")
+            if best_key is None or key < best_key:
+                best, best_key = t, key
+        return [best] if best is not None else []
+
     def to_world(self, peel, ab: np.ndarray) -> np.ndarray:
         return peel.point(float(ab[0]), float(ab[1]))
 
@@ -136,11 +166,14 @@ class Spec:
 
     def hero(self, static: dict) -> dict:
         """The booth's peel view (``wipe_phone.peel_view``): straight onto the tilted
-        phone face from over the arms' shoulders, aimed a little down the face."""
+        phone face from over the arms' shoulders, aimed a little down the face; fov 34
+        so the phone fills the frame. Chosen on ``rsw camera`` sheets (2026-09-30): every
+        side or three-quarter view (+-y, 0.45-0.55 m out) sat inside an arm's links --
+        the two YAMs flank the phone -- so the lift can only be read face-on."""
         tab, u, n = (np.asarray(static[k], dtype=np.float64) for k in ("tab", "u", "n"))
         look = tab - u * (0.0735 + 0.06)
         eye = look + 1.1 * (n * 0.40 + np.array([0.0, 0.0, 0.05]))
-        return {"look_at": look.tolist(), "eye": eye.tolist(), "fov_y": 40.0}
+        return {"look_at": look.tolist(), "eye": eye.tolist(), "fov_y": 34.0}
 
     def static_meta(self, env, peel) -> dict:
         law = peel.law

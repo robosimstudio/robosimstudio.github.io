@@ -9,46 +9,21 @@ with the suite's own routine (``rsw_data/gears/runs``).
 
 from __future__ import annotations
 
-import json
-
 import numpy as np
 
 from rsw import paths
 
+from ._bench import BenchTrack
+
 ID = "gears"
-RUN = paths.DATA / "gears" / "runs" / "t001"
 
 
-class Spec:
+class Spec(BenchTrack):
     id = ID
-    kind = "track"
-    handles = (("right", "right_ee_pose"),)
-
-    def meta(self) -> dict:
-        return json.loads((RUN / "run_meta.json").read_text())
-
-    def build(self, device=None):
-        paths.use_rss()
-        from robosimstudio_bench.envs.env import Env
-
-        m = self.meta()
-        env = Env(m["task"], scene=m["scene"], embodiment=m["embodiment"], gripper=m.get("gripper") or "",
-                  episode=0, renderer="", device=device)
-        env.obs_render_enabled = False
-        ep = json.loads((RUN / "0000" / "meta.json").read_text())
-        key = getattr(env, "model_key", None)
-        if key and ep.get("model_key") and key != ep["model_key"]:
-            print(f"[gears] warning: model_key {key} != recorded {ep['model_key']}")
-        return env
-
-    def recording(self) -> dict:
-        p = np.load(RUN / "0000" / "privileged.npz")
-        s = np.load(RUN / "0000" / "steps.npz")
-        ee = np.stack([s[key] for _, key in self.handles], axis=1)
-        return {"body_q": p["body_q"], "ee": ee, "sim_time": s["sim_time"], "_take": str(RUN)}
+    RUN = paths.DATA / "gears" / "runs" / "t001"
 
     def static(self) -> dict:
-        s = np.load(RUN / "0000" / "steps.npz")
+        s = np.load(self.RUN / self.EPISODE / "steps.npz")
         gears = np.stack([s[k][-1, :3] for k in ("obj_gear_a", "obj_gear_b", "obj_gear_c")])
         return {"gears_final": gears.tolist(), "press": s["right_ee_pose"][-1, :3].tolist()}
 

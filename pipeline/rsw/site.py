@@ -27,7 +27,7 @@ TITLES = {
     "gears": "Gear train",
     "plates": "Plate rack",
     "weave": "Cable weave",
-    "conduit": "Cable through a conduit",
+    "conduit": "Thread the conduit",
 }
 
 
@@ -43,6 +43,33 @@ def _put(src: Path, dst_dir: Path, stem: str, suffix: str | None = None) -> str:
     if not dst.exists():
         shutil.copyfile(src, dst)
     return name
+
+
+def _texture_file(key: str) -> Path | None:
+    """A finish texture on disk: a path, or a procedural one RTX has already rendered into the
+    texture cache (a suite registers its generators only when its task loads, so a bare
+    ``texture_path`` cannot render them here)."""
+    if Path(key).is_file():
+        return Path(key)
+    from robosimstudio.core.render.finish import texture_cache_dir
+
+    found = sorted(Path(texture_cache_dir()).glob(f"{key}_v*.png"))
+    return found[-1] if found else None
+
+
+def _deform_textures(fin: dict, out: Path) -> dict:
+    """The deformable's finish textures, shipped beside it, for the live layer."""
+    tex = {}
+    for field, key in (("map", "texture"), ("roughness_map", "roughness_texture")):
+        name = fin.get(key)
+        if not name:
+            continue
+        src = _texture_file(str(name))
+        if src is None:
+            print(f"[site] warning: texture {name!r} not found; the live {key} is left out")
+            continue
+        tex[field] = _put(src, out, f"tex_{Path(src).stem}", ".png")
+    return tex
 
 
 def _webp(args) -> None:
@@ -165,6 +192,13 @@ def assemble_free(demo: str) -> dict:
             "taint": plate["ink"]["taint"], "clear": plate["ink"]["clear"], "bbox": plate["bbox"],
             "r0": db["ink"]["r0"], "rmax": db["ink"]["rmax"],
         }
+    from . import rssb
+
+    dmeta = rssb.read(D / "db" / "deform.rssb.gz")[1]
+    if dmeta.get("kind") == "mesh":
+        tex = _deform_textures(dmeta.get("finish", {}), out)
+        if tex:
+            manifest["deform_tex"] = tex
     if "n_bonds" in static:
         manifest["peel"] = {"n_bonds": int(static["n_bonds"]), "columns": len(db.get("rows_shape", [])) or None}
     if (D / "attract" / "attract.mp4").exists():
@@ -173,8 +207,6 @@ def assemble_free(demo: str) -> dict:
     if (D / "tiles" / "tile.mp4").exists():
         files["tile"] = _put(D / "tiles" / "tile.mp4", out, "tile", ".mp4")
         files["poster"] = _put(D / "tiles" / "poster.webp", out, "poster", ".webp")
-
-    from . import rssb
 
     hands = [rssb.read(D / "db" / c["file"])[0]["hand"][::15] for c in db["chunks"]]
     manifest["roi"] = _roi(cam, np.concatenate(hands))

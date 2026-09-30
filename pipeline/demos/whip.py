@@ -113,7 +113,8 @@ class Spec:
         for _ in range(600):
             arm.step()
         drag.set(k_quad, 0.0)
-        self.arm, self.ent, self.bodies, self.drag = arm, ent, bodies, drag
+        self.arm, self.ent, self.bodies, self.drag, self.k_quad = arm, ent, bodies, drag, k_quad
+        self.takes_started = 0
         self.plan_q = None
         sim.sync()
         self.hold_P0 = np.asarray(arm.body_T(self.seg)[:3, 3], dtype=np.float64)
@@ -150,13 +151,52 @@ class Spec:
     def to_world(self, arm, ab: np.ndarray) -> np.ndarray:
         return np.array([float(ab[0]), 0.0, float(ab[1])])
 
+    def attract_program(self, arm, hz: float = 60.0) -> np.ndarray:
+        """The clip's own hand (``cable_wiggle/drive.py`` off ``out/track``: 8 s, x 0.02..0.31
+        at z 1.485): rest at the hover point, glide to the clip's first pose, play it, glide
+        back, and rest 4 s so the cable settles for the idle loop's seam."""
+        Drive = self.RUN.Drive
+        drive = Drive(paths.CABLE / "out" / "track" / "centerlines.json", pre_roll_cycles=2, control_hz=hz)
+        clip = np.array([[drive.at(t)[0][0], drive.at(t)[0][2]] for t in np.arange(0.0, drive.duration, 1.0 / hz)])
+        clip[:, 0] = np.clip(clip[:, 0], *self.box.a)
+        clip[:, 1] = np.clip(clip[:, 1], *self.box.b)
+        home = self.hover_ab(arm)
+
+        def glide(p0, p1, s):
+            u = np.linspace(0.0, 1.0, max(2, int(s * hz)))[:, None]
+            k = u * u * u * (10 - 15 * u + 6 * u * u)
+            return p0 + (p1 - p0) * k
+
+        rest = lambda s: np.repeat(home[None, :], int(s * hz), axis=0)  # noqa: E731
+        return np.concatenate([rest(1.0), glide(home, clip[0], 0.8), clip, glide(clip[-1], home, 0.8), rest(4.0)])
+
+    def pick_attract(self, takes) -> list:
+        """The clip take (no gate) whose cable ends closest to how it started."""
+        import json as _json
+
+        from rsw.record import load as load_take
+
+        best, best_key = None, None
+        for t in takes:
+            meta = _json.loads((t / "meta.json").read_text())
+            if meta.get("gate"):
+                continue
+            d = load_take(t)
+            seam = float(np.abs(d["deform"][-1] - d["deform"][0]).max()) + float(np.linalg.norm(d["tcp"][-1, :3] - d["tcp"][0, :3]))
+            print(f"[attract] {t.parent.name}/{t.name}: seam {seam * 1e3:.1f} mm, {len(d['t'])} steps")
+            if best_key is None or seam < best_key:
+                best, best_key = t, seam
+        return [best] if best is not None else []
+
     # --------------------------------------------------------------- planning
     def plan(self, arm, cursor_world: np.ndarray) -> dict:
         """Open-loop servo law + IK over the whole take; returns per-step targets."""
         from robosimstudio.solvers.motion.osc import OscGains, OscSetpoint
 
         law = OscSetpoint(control_dt=self.dt, gains=OscGains(kp=KP))
-        p = self.hold_P0.copy()
+        # From where the jaws hold the cable now: planning from the pre-roll's rest point
+        # commanded take 1 to jump from wherever take 0 ended (gated at step 1, 60 mm off).
+        p = np.asarray(arm.body_T(self.seg)[:3, 3], dtype=np.float64)
         law.reset(p, np.array([0.0, 0.0, 0.0, 1.0]))
         n = len(cursor_world)
         P = np.zeros((n, 3))
@@ -184,6 +224,26 @@ class Spec:
     # ------------------------------------------------------------- stepping
     def start_take(self, sim, arm) -> None:
         self.lead_hist = []
+        if self.takes_started:
+            self._return_home(sim, arm)
+        self.takes_started += 1
+
+    def _return_home(self, sim, arm) -> None:
+        """Glide the held point back to where the pre-roll left it (<= 0.25 m/s) and let the
+        cable settle 10 s at the pre-roll's linear drag, unrecorded, so every take starts from
+        rest where the first one did."""
+        p_now = np.asarray(arm.body_T(self.seg)[:3, 3], dtype=np.float64)
+        home = np.asarray(self.hold_P0, dtype=np.float64)
+        n = max(2, int(max(1.0, float(np.linalg.norm(home - p_now)) / 0.25) / self.dt))
+        u = np.linspace(0.0, 1.0, n)[:, None]
+        path = p_now + (home - p_now) * (u * u * u * (10 - 15 * u + 6 * u * u))
+        rest = np.repeat(home[None, :], int(10.0 / self.dt), axis=0)
+        self.plan(arm, np.concatenate([path, rest]))
+        self.drag.set(self.k_quad, 0.08)
+        for _ in range(len(self.plan_q)):
+            self.step(sim, arm, None)
+        self.drag.set(self.k_quad, 0.0)
+        sim.sync()
 
     def step(self, sim, arm, world: np.ndarray) -> None:
         coords = arm.ik.arm_coords

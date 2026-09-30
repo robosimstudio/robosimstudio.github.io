@@ -40,7 +40,14 @@ export interface LookJson {
 
 export interface DeformMaterial {
   color: number[]; // display sRGB 0..1
-  finish: { roughness: number; metallic: number; opacity: number };
+  finish: { roughness: number; metallic: number; opacity: number; uv_scale?: number[]; uv_offset?: number[] };
+  /** The finish's colour / roughness textures (URLs), as RTX draws them: a colour texture
+   * replaces the colour, a roughness texture the roughness constant (``finish_gltf`` rules). */
+  map?: string;
+  roughnessMap?: string;
+  /** Live-only opacity (the look calibration's): RTX keeps a thin film's highlights at any
+   * opacity, a raster blend scales them with it. */
+  opacity?: number;
 }
 
 export class LiveRenderer {
@@ -201,14 +208,28 @@ export class LiveRenderer {
     g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
     g.setIndex(new THREE.BufferAttribute(tris, 1));
     const color = new THREE.Color().setRGB(mat.color[0], mat.color[1], mat.color[2], THREE.SRGBColorSpace);
+    const opacity = mat.opacity ?? mat.finish.opacity;
     const m = new THREE.MeshStandardMaterial({
-      color,
-      roughness: mat.finish.roughness,
+      color: mat.map ? new THREE.Color(1, 1, 1) : color,
+      roughness: mat.roughnessMap ? 1.0 : mat.finish.roughness,
       metalness: mat.finish.metallic,
-      transparent: mat.finish.opacity < 1,
-      opacity: mat.finish.opacity,
+      transparent: opacity < 1,
+      opacity,
       side: THREE.DoubleSide,
     });
+    const tiled = (url: string, srgb: boolean): THREE.Texture => {
+      const t = new THREE.TextureLoader().load(url, () => (m.needsUpdate = true));
+      t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+      t.wrapS = t.wrapT = THREE.RepeatWrapping;
+      const [su, sv] = mat.finish.uv_scale ?? [1, 1];
+      const [ou, ov] = mat.finish.uv_offset ?? [0, 0];
+      t.repeat.set(su, sv);
+      t.offset.set(ou, ov);
+      t.anisotropy = 4;
+      return t;
+    };
+    if (mat.map) m.map = tiled(mat.map, true);
+    if (mat.roughnessMap) m.roughnessMap = tiled(mat.roughnessMap, false);
     const mesh = new THREE.Mesh(g, m);
     mesh.castShadow = true;
     mesh.receiveShadow = true;

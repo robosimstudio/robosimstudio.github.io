@@ -168,7 +168,16 @@ export class FreeDragDemo implements Demo {
     };
     this.pca = { mean, basis, K, V, frame: dmeta.frame, arm: dmeta.arm ?? m.deform_arm ?? "right", tube: dmeta.kind === "tube" };
     if (dmeta.kind === "tube") stage.live.addTube(V, dmeta.radius ?? 0.0025, dmeta.color, dmeta.finish.roughness);
-    else stage.live.addDeformable(dm.tris.data as Uint32Array, dm.uv.data as Float32Array, V, { color: dmeta.color, finish: dmeta.finish });
+    else {
+      const tex = (m.deform_tex ?? {}) as { map?: string; roughness_map?: string; opacity?: number };
+      stage.live.addDeformable(dm.tris.data as Uint32Array, dm.uv.data as Float32Array, V, {
+        color: dmeta.color,
+        finish: dmeta.finish,
+        map: tex.map ? base + tex.map : undefined,
+        roughnessMap: tex.roughness_map ? base + tex.roughness_map : undefined,
+        opacity: (m.look?.deform_opacity as number | undefined) ?? tex.opacity,
+      });
+    }
 
     if (m.ink) {
       const cells = (m.ink.cells as number[][]).length;
