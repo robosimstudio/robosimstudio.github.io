@@ -67,8 +67,20 @@ def _png_writer(q: Queue):
         item = q.get()
         if item is None:
             return
-        path, rgb = item
+        path, rgb, *src = item
         _png(path, rgb)
+        if src:  # the image's source, written only once the image is whole
+            source_file(path).write_text(json.dumps(src[0]))
+
+
+def source_file(png: Path) -> Path:
+    """A still's sidecar: the (take, 60 Hz step) it was rendered from."""
+    return png.with_name(png.stem + ".src.json")
+
+
+def rendered_source(png: Path):
+    f = source_file(png)
+    return json.loads(f.read_text()) if png.exists() and f.exists() else None
 
 
 # ------------------------------------------------------------------------ plate
@@ -283,19 +295,13 @@ def stills(demo: str, gpu: int, shard: int = 0, nshards: int = 1, accumulate: in
     cache: dict[str, dict] = {}
     done = 0
     # A still is filed under its index in db.json's still list, and a rebuilt database can renumber
-    # frames. Each image's source (take, 60 Hz step) is kept in a sidecar; one whose source no longer
-    # matches the database is rendered again, one that matches is kept.
-    side_path = out / f"sources.{shard}.json"
+    # frames. Each image's source (take, 60 Hz step) is kept in its own sidecar; one whose source no
+    # longer matches the database is rendered again, one that matches is kept.
     sources = still_sources(demo)
-    done_src = {}
-    for sp in out.glob("sources.*.json"):
-        done_src.update(json.loads(sp.read_text()))
-    mine = {}
     for f in frames:
         sid = db["stills"].index(f)
         dst = out / f"{sid:04d}.png"
-        mine[str(sid)] = sources[sid]
-        if dst.exists() and done_src.get(str(sid)) == sources[sid]:
+        if rendered_source(dst) == sources[sid]:
             continue
         take, step = where(f)
         if str(take) not in cache:
@@ -309,14 +315,13 @@ def stills(demo: str, gpu: int, shard: int = 0, nshards: int = 1, accumulate: in
             s2 = _write_frame(spec, sess, st, d["body_q"][step], d["joint_q"][step], d["deform"][step], np.zeros(n_cells))
             clean = sess.render(s2, passes=passes)[cam.name]["rgb"]
             q.put((out / f"{sid:04d}.clean.png", clean[y0 : y0 + h, x0 : x0 + w].copy()))
-        q.put((dst, rgb))
+        q.put((dst, rgb, sources[sid]))
         done += 1
         if done % 20 == 0:
             print(f"[stills] {demo} shard {shard}: {done}/{len(frames)}", flush=True)
     q.put(None)
     th.join()
     sess.close()
-    side_path.write_text(json.dumps(mine))
     return {"rendered": done, "shard": shard}
 
 

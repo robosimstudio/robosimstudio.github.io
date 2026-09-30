@@ -78,10 +78,11 @@ class Spec:
     deform_name = "towel"
     deform_arm = "left"
     hp_scale = 0.0063
-    match_weights = {"hv": 0.05, "fd": 3.0, "dm": 0.02, "dv": 0.01}
-    """Starting a move from rest needs frames that do so from here; with a drape's worth of shapes
-    to match too they were rare, and the hand stalled (harness 09-30: default weights stall 42 %;
-    these, favouring the predicted motion over the velocity and the cloth's shape, 11.5 %)."""
+    match_weights = {"hv": 0.2, "fd": 2.0, "dm": 0.05, "dv": 0.02}
+    """Favour the predicted motion over the velocity and the cloth's shape: starting a move from rest
+    needs frames that do so from here, and with a drape's worth of shapes to match too they were rare
+    (harness 09-30 on the reach-cut database, 8 trials: stalls 0.4 % vs 2.5 % at the defaults; follow
+    32/87 mm, jumps 6.9/14.4 mm, settle 4/8 with the other 4 resting live)."""
     pca_k_max = 256
     """A towel that folds, lifts and drapes: 128 modes left p99.9 at 11 mm (max 85), 256 at 6.5."""
     settle_deform_speed = 0.02

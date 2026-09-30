@@ -162,13 +162,10 @@ def assemble_free(demo: str) -> dict:
     files["plate"] = _put(tmp / "plate.webp", out, "plate", ".webp")
 
     still_dir = D / "stills"
-    from .stages import still_sources
+    from .stages import rendered_source, still_sources
 
-    rendered = {}
-    for sp in still_dir.glob("sources.*.json"):
-        rendered.update(json.loads(sp.read_text()))
     want = still_sources(demo)
-    stale = [i for i, s in enumerate(want) if rendered.get(str(i)) != s]
+    stale = [i for i, s in enumerate(want) if rendered_source(still_dir / f"{i:04d}.png") != s]
     if stale:
         raise SystemExit(f"[site] {demo}: {len(stale)} stills were rendered from other frames than db.json's (e.g. still "
                          f"{stale[0]}) -- re-run rsw stills")
