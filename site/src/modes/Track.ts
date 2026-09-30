@@ -23,10 +23,14 @@ export class TrackDemo implements Demo {
   private m: Manifest;
   private base: string;
   private mode: Mode = "playing";
-  private camera: Camera;
   private bodies: Uint32Array = new Uint32Array(0);
   private poses: Float32Array = new Float32Array(0);
+  /** Each handle's pixel per frame in the view being shown (the scrubber reads it in place). */
   private eePx: Float32Array = new Float32Array(0);
+  /** ... as the pipeline projected them for the hero camera, and the points in the world. */
+  private eePxHero: Float32Array = new Float32Array(0);
+  private eeWorld: Float32Array | null = null;
+  private projVersion = -1;
   private H = 1;
   private N = 0;
   private t = 0;
@@ -45,7 +49,15 @@ export class TrackDemo implements Demo {
     this.stage = stage;
     this.m = manifest;
     this.base = stage.base(id);
-    this.camera = new Camera(manifest.camera);
+  }
+
+  /** The camera the page is seen through: the hero's, or the visitor's orbit about it. */
+  private get camera(): Camera {
+    return this.stage.view.camera;
+  }
+
+  canOrbit(): boolean {
+    return this.ready;
   }
 
   roi(): [number, number, number, number] {
@@ -92,9 +104,28 @@ export class TrackDemo implements Demo {
         }
       }
     }
+    this.eePxHero = Float32Array.from(this.eePx);
+    this.eeWorld = world ?? null;
+    this.projVersion = this.stage.view.version;
     this.scrubber = new Scrubber(this.eePx, this.N, this.H, { fps: 30 });
     const track = (this.m.track ?? {}) as { show?: number[] };
     this.show = (track.show ?? [...Array(this.H).keys()]).filter((h) => h >= 0 && h < this.H);
+    if (world) {
+      // orbit about where the grippers work
+      const c = [0, 0, 0];
+      let n = 0;
+      for (let i = 0; i < this.N; i++)
+        for (const h of this.show) {
+          const o = (i * this.H + h) * 3;
+          if (!Number.isFinite(world[o])) continue;
+          c[0] += world[o];
+          c[1] += world[o + 1];
+          c[2] += world[o + 2];
+          n++;
+        }
+      if (n) this.stage.view.setFocus([c[0] / n, c[1] / n, c[2] / n]);
+      this.projVersion = this.stage.view.version;
+    }
     for (let k = 0; k < this.show.length; k++) {
       const d = document.createElement("div");
       d.className = "handle";
@@ -107,6 +138,7 @@ export class TrackDemo implements Demo {
   pointerDown(e: PointerEvent, rtx: [number, number]): void {
     if (!this.ready) return;
     this.lastInput = performance.now();
+    this.reproject();
     const f = this.currentFrame();
     let best = -1;
     let bestD = Infinity;
@@ -144,6 +176,14 @@ export class TrackDemo implements Demo {
     this.grab = null;
     this.lastInput = performance.now();
     if (!this.scrubber.flick.release(e.timeStamp / 1000)) this.snap();
+  }
+
+  /** A second finger turned the scrub into an orbit: stop on the frame reached, no coast. */
+  pointerCancel(): void {
+    if (!this.grab) return;
+    this.grab = null;
+    this.lastInput = performance.now();
+    this.snap();
   }
 
   key(e: KeyboardEvent): void {
@@ -225,10 +265,40 @@ export class TrackDemo implements Demo {
       if (!this.scrubber.flick.coast(dt)) this.snap();
       else this.t = Math.min(this.N - 1, Math.max(0, this.scrubber.flick.x[0]));
     }
-    if (this.mode === "paused" && performance.now() - this.lastInput > RESUME_AFTER_S * 1000) this.play();
+    // looking around is activity too: a paused frame stays paused while it is being looked at
+    if (this.mode === "paused" && performance.now() - Math.max(this.lastInput, this.stage.view.lastInputAt) > RESUME_AFTER_S * 1000) this.play();
     const f = this.currentFrame();
     if (this.mode !== "playing") this.poseAt(this.t);
+    // off the hero view the video is hidden: its frame, drawn live
+    else if (this.stage.view.look > 0) this.poseAt(Math.min(this.N - 1, Math.max(0, v.currentTime * 30)));
+    this.reproject();
     this.drawHandles(f);
+  }
+
+  /** The handles' pixels for the view being shown: the pipeline's own at the hero view, else
+   * re-projected from the world, with the same rule for a hand beside or behind the camera. */
+  private reproject(): void {
+    const view = this.stage.view;
+    if (view.version === this.projVersion) return;
+    this.projVersion = view.version;
+    const px = this.eePx;
+    if (view.home) {
+      px.set(this.eePxHero);
+      return;
+    }
+    const w = this.eeWorld;
+    if (!w) {
+      px.fill(Number.NaN); // nothing to re-project: no handles off the hero view
+      return;
+    }
+    const cam = this.camera;
+    const p: [number, number, number] = [0, 0, 0];
+    for (let i = 0; i < this.N * this.H; i++) {
+      cam.project([w[3 * i], w[3 * i + 1], w[3 * i + 2]], p);
+      const ok = p[2] > 0.08 && p[0] > -960 && p[0] < 2880 && p[1] > -540 && p[1] < 1620;
+      px[2 * i] = ok ? p[0] : Number.NaN;
+      px[2 * i + 1] = ok ? p[1] : Number.NaN;
+    }
   }
 
   private poseAt(t: number): void {

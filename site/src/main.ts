@@ -23,6 +23,8 @@ factories.track = (stage, id, manifest) => {
     pointerDown: (e, p) => inner?.pointerDown(e, p),
     pointerMove: (e, p) => inner?.pointerMove(e, p),
     pointerUp: (e, p) => inner?.pointerUp(e, p),
+    pointerCancel: () => inner?.pointerCancel?.(),
+    canOrbit: () => !!inner && (inner.canOrbit?.() ?? true),
     key: (e) => inner?.key?.(e),
     resize: (p) => {
       placed = p;

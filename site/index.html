@@ -14,9 +14,11 @@
         <img class="layer bg" id="bg" alt="" draggable="false" />
         <canvas class="layer ink" id="bg-ink"></canvas>
         <canvas class="layer live" id="live"></canvas>
-        <img class="layer still" id="still" alt="" draggable="false" />
-        <canvas class="layer ink" id="still-ink"></canvas>
-        <video class="layer vid" id="vid" muted playsinline preload="auto" disablepictureinpicture></video>
+        <div class="layer over" id="over">
+          <img class="layer still" id="still" alt="" draggable="false" />
+          <canvas class="layer ink" id="still-ink"></canvas>
+          <video class="layer vid" id="vid" muted playsinline preload="auto" disablepictureinpicture></video>
+        </div>
       </div>
       <div id="curtain" aria-hidden="true"></div>
       <div id="overlay" aria-hidden="true"></div>

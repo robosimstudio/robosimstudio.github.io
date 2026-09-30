@@ -63,7 +63,6 @@ export class FreeDragDemo implements Demo {
   private m: Manifest;
   private base: string;
   private ball: Ball;
-  private camera: Camera;
   private drag: DragMapping;
   private flick: Flick;
   private settle: Settle;
@@ -120,7 +119,6 @@ export class FreeDragDemo implements Demo {
     this.stage = stage;
     this.m = manifest;
     this.base = stage.base(id);
-    this.camera = new Camera(manifest.camera);
     this.drag = new DragMapping(manifest.drag);
     const slack = (manifest.drag as { one_way_slack?: number }).one_way_slack;
     this.oneWaySlack = typeof slack === "number" ? slack : null;
@@ -139,6 +137,17 @@ export class FreeDragDemo implements Demo {
     this.targetPrev = [...this.target];
     this.ball = new Ball(stage.overlay);
     this.ball.visible(false);
+    // orbit about the ball's resting place: the part of the scene that moves
+    stage.view.setFocus(this.drag.toWorld(this.target[0], this.target[1]));
+  }
+
+  /** The camera the page is seen through: the hero's, or the visitor's orbit about it. */
+  private get camera(): Camera {
+    return this.stage.view.camera;
+  }
+
+  canOrbit(): boolean {
+    return this.dataReady;
   }
 
   roi(): [number, number, number, number] {
@@ -208,6 +217,7 @@ export class FreeDragDemo implements Demo {
       this.bgInk = new InkComposite(stage.bgInk, m.ink.bbox, cellMap);
       this.stillInk = new InkComposite(stage.stillInk, m.ink.bbox, cellMap);
       await this.bgInk.setClean(base + m.files.plate_clean);
+      if (m.ink.bar_pose) stage.live.addInk3d(m.ink.cells, m.ink.bar_pose, m.ink.radius, m.ink.pitch, m.ink.taint);
     }
     this.dataReady = true;
     this.ball.visible(true);
@@ -277,6 +287,16 @@ export class FreeDragDemo implements Demo {
     this.lastInput = performance.now();
     const coasting = this.flick.release(e.timeStamp / 1000);
     if (!coasting) this.settle.coastEnded();
+  }
+
+  /** A second finger turned the drag into an orbit: the ball stays where it is, no flick. */
+  pointerCancel(): void {
+    if (!this.grab) return;
+    this.grab = null;
+    this.ball.held(false);
+    this.flick.stop();
+    this.settle.coastEnded();
+    this.lastInput = performance.now();
   }
 
   // ---------------------------------------------------------------- handover
@@ -416,6 +436,12 @@ export class FreeDragDemo implements Demo {
     if (this.mode !== "attract" && this.dataReady) this.stepReink(dt);
     if (this.mode === "attract" || !this.dataReady) {
       this.drawBallAttract();
+      if (this.dataReady && stage.view.look > 0) {
+        // off the hero view the video is hidden: its frame, drawn live
+        this.poseAttract();
+        if (this.ink) stage.live.setInk3d(this.ink.I);
+        stage.live.render();
+      }
       return;
     }
     // target: the finger, a coast, or where the finger left it
@@ -471,8 +497,10 @@ export class FreeDragDemo implements Demo {
       if (this.framesSinceSearch >= (this.m.match?.every_frames ?? 3) || player.runway() < 4) this.search(pred);
       if (this.mode === "settling" && this.stillIndex >= 0) this.maybeDissolve();
     }
-    if (idleFor(this.lastInput) > IDLE_TO_ATTRACT_S && !this.grab) this.toAttract();
+    // looking around is activity too
+    if (idleFor(Math.max(this.lastInput, stage.view.lastInputAt)) > IDLE_TO_ATTRACT_S && !this.grab) this.toAttract();
     this.pose(dt);
+    if (this.ink && stage.view.look > 0) stage.live.setInk3d(this.ink.I);
     stage.live.render();
     this.drawBall();
     void now;
@@ -615,11 +643,13 @@ export class FreeDragDemo implements Demo {
   }
 
   private maybeDissolve(): void {
+    // an RTX still is a picture from the hero camera: it comes in once the view is back there
+    if (!this.stage.view.home) return;
     const idx = this.stillIndex;
     const p = this.stillCache.get(idx);
     if (!p) return;
     void p.then(() => {
-      if (this.stillIndex !== idx || this.mode !== "settling") return;
+      if (this.stillIndex !== idx || this.mode !== "settling" || !this.stage.view.home) return;
       const b = this.blender!;
       if (b.get("q").o.some((x) => Math.abs(x) > 2e-4) || b.get("hand").o.some((x) => Math.abs(x) > 2e-4)) return;
       this.stage.still.src = this.base + this.m.stills.files[idx];
@@ -641,6 +671,23 @@ export class FreeDragDemo implements Demo {
     const cur = Number(stage.video.style.opacity || "0");
     if (wantVid > cur) stage.video.style.opacity = String(Math.min(wantVid, cur + dt / 0.5));
     else if (wantVid < cur) stage.video.style.opacity = String(Math.max(wantVid, cur - dt / DISSOLVE_OUT_S));
+  }
+
+  /** The attract video's current frame, posed exactly (no blending), with its ink. */
+  private poseAttract(): void {
+    const store = this.store!;
+    const player = this.player!;
+    const f0 = this.m.attract?.frames?.[0] ?? 0;
+    const f1 = this.m.attract?.frames?.[1] ?? f0 + 1;
+    const k = Math.floor(this.stage.video.currentTime * 30 + 1e-3);
+    const f = Math.min(f0 + Math.max(0, k), f1 - 1);
+    if (player.frame !== f) player.set(f);
+    this.blender!.reset();
+    if (this.ink) {
+      const row = store.inkStateRow(f);
+      if (row) this.ink.setFromState(row);
+    }
+    this.pose(0);
   }
 
   // -------------------------------------------------------------- posing
@@ -751,6 +798,7 @@ export class FreeDragDemo implements Demo {
     const pl = this.stage.placement();
     const w = this.drag.toWorld(this.target[0], this.target[1]);
     const p = this.camera.project(w);
+    this.ball.visible(p[2] > 0.05); // orbited round behind the camera
     const [x, y] = toStage(pl, p[0], p[1]);
     const r = Math.min(26, Math.max(10, ((this.camera.fy * 0.0125) / Math.max(p[2], 0.05)) * pl.s));
     this.ball.place(x, y, r);
@@ -772,6 +820,7 @@ export class FreeDragDemo implements Demo {
     const pl = this.stage.placement();
     const w = this.drag.toWorld(c[0], c[1]);
     const p = this.camera.project(w);
+    if (this.dataReady) this.ball.visible(p[2] > 0.05);
     const [x, y] = toStage(pl, p[0], p[1]);
     const r = Math.min(26, Math.max(10, ((this.camera.fy * 0.0125) / Math.max(p[2], 0.05)) * pl.s));
     this.ball.place(x, y, r);

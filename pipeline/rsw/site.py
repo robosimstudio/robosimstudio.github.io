@@ -232,6 +232,7 @@ def assemble_free(demo: str) -> dict:
         files["inkmap"] = _put(D / "plate" / "inkmap.rssb.gz", out, "inkmap", ".rssb.gz")
         manifest["ink"] = {
             "cells": plate["ink"]["cells"], "pitch": plate["ink"]["pitch"], "radius": plate["ink"]["radius_top"],
+            "bar_pose": plate["ink"]["bar_pose"],  # the page draws the ink in 3D off the hero view
             "taint": plate["ink"]["taint"], "clear": plate["ink"]["clear"], "bbox": plate["bbox"],
             "r0": db["ink"]["r0"], "rmax": db["ink"]["rmax"],
         }

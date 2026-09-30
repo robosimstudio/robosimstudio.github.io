@@ -8,6 +8,12 @@
 //     the static shadows, path traced.
 // The camera is the RTX camera exactly (cx = W/2 - 0.5 makes the RTX frustum
 // symmetric), so this canvas and the RTX frames line up pixel for pixel.
+//
+// Off the hero view (the visitor orbiting) the RTX frames no longer line up, and
+// this layer draws the whole scene instead: a copy of every static mesh in its
+// own material, drawn where the depth pre-pass left it in front; RTX's own
+// surroundings (the environment probe) as a backdrop; the wipe's ink as a decal.
+// ``setFreeLook(k)`` fades all of that in (k = 1) and out (k = 0: as above).
 
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
@@ -68,6 +74,14 @@ export class LiveRenderer {
   private envTex: THREE.Texture | null = null;
   private hemi: THREE.HemisphereLight | null = null;
   private catchers: THREE.ShadowMaterial[] = [];
+  private catcherOpacity = 0.35;
+  /** Per static mesh: its pre-pass twin, and a copy in its own material for the free view. */
+  private statics: { pre: THREE.Mesh; copy: THREE.Mesh; opacity: number }[] = [];
+  private backdrop: THREE.Mesh<THREE.SphereGeometry, THREE.ShaderMaterial> | null = null;
+  private backdropTex: THREE.Texture | null = null;
+  private ink3d: { mesh: THREE.Mesh; color: THREE.BufferAttribute; n: number } | null = null;
+  /** The free view's fade, as last applied (-1: re-apply). */
+  private freeK = 0;
   width = 1920;
   height = 1080;
 
@@ -95,9 +109,13 @@ export class LiveRenderer {
     this.camera.aspect = (c.width / c.height) * (c.fy / c.fx);
     this.camera.near = Math.max(0.01, c.near);
     this.camera.far = c.far;
-    // Pose from the CV camera-to-world (x right, y down, z forward): three's
-    // camera looks down -z with +y up, i.e. diag(1, -1, -1) on the CV basis.
-    const m = c.cam_to_world_cv; // column-major
+    this.camera.updateProjectionMatrix();
+    this.setPose(c.cam_to_world_cv);
+  }
+
+  /** The camera's pose only, from a CV camera-to-world (column-major): the hero's, or the visitor's orbit. */
+  setPose(m: ArrayLike<number>): void {
+    // CV (x right, y down, z forward) to three's camera (looks down -z, +y up): diag(1, -1, -1)
     const mat = new THREE.Matrix4().set(
       m[0], -m[4], -m[8], m[12],
       m[1], -m[5], -m[9], m[13],
@@ -105,8 +123,8 @@ export class LiveRenderer {
       0, 0, 0, 1,
     );
     mat.decompose(this.camera.position, this.camera.quaternion, this.camera.scale);
-    this.camera.updateProjectionMatrix();
     this.camera.updateMatrixWorld(true);
+    this.backdrop?.position.copy(this.camera.position);
   }
 
   setLook(look: LookJson, base = ""): void {
@@ -116,19 +134,29 @@ export class LiveRenderer {
     this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
     pm.dispose();
     this.scene.environment = this.envTex;
+    this.addBackdrop();
     if (look.env_map) {
       const scene = this.scene;
+      const envTex = this.envTex;
       new THREE.TextureLoader().load(base + look.env_map, (tex) => {
-        if (this.scene !== scene || this.envTex === null) return; // reset or disposed meanwhile
+        if (this.scene !== scene || this.envTex !== envTex) {
+          tex.dispose(); // reset or disposed meanwhile
+          return;
+        }
         tex.mapping = THREE.EquirectangularReflectionMapping;
         tex.colorSpace = THREE.SRGBColorSpace;
         const g = new THREE.PMREMGenerator(this.renderer);
         const rt = g.fromEquirectangular(tex);
         g.dispose();
-        tex.dispose();
         this.envTex?.dispose();
         this.envTex = rt.texture;
         this.scene.environment = this.envTex;
+        // the same picture, seen directly, is the free view's backdrop
+        this.backdropTex = tex;
+        if (this.backdrop) {
+          this.backdrop.material.uniforms.map.value = tex;
+          this.backdrop.material.uniforms.hasMap.value = 1;
+        }
       });
     }
     this.scene.environmentIntensity = look.env_intensity ?? 0.6;
@@ -192,6 +220,30 @@ export class LiveRenderer {
         if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh);
       });
       for (const m of meshes) {
+        // the free view's copy, in the mesh's own material: drawn only where the pre-pass left
+        // this surface in front (LessEqual on its own depth), faded by opacity
+        const own = (Array.isArray(m.material) ? m.material[0] : m.material) as THREE.Material;
+        const full = own.clone();
+        const opacity = own.opacity;
+        full.transparent = true;
+        full.depthWrite = false;
+        full.depthFunc = THREE.LessEqualDepth;
+        // two shaders may round the same depth an ulp apart: lean the copy toward the camera
+        full.polygonOffset = true;
+        full.polygonOffsetFactor = -1;
+        full.polygonOffsetUnits = -4;
+        full.opacity = 0;
+        const copy = new THREE.Mesh(m.geometry, full);
+        copy.receiveShadow = true;
+        copy.castShadow = false;
+        copy.renderOrder = 5;
+        copy.visible = false;
+        copy.position.copy(m.position);
+        copy.quaternion.copy(m.quaternion);
+        copy.scale.copy(m.scale);
+        m.parent?.add(copy);
+        this.statics.push({ pre: m, copy, opacity });
+        own.dispose();
         // depth-only: occludes moving parts, draws nothing over the plate
         m.material = new THREE.MeshBasicMaterial({ colorWrite: false });
         m.renderOrder = -10;
@@ -209,6 +261,8 @@ export class LiveRenderer {
         m.parent?.add(c);
       }
     }
+    this.catcherOpacity = shadowOpacity;
+    this.freeK = -1; // new meshes: apply the free view's fade afresh
   }
 
   /** Retune the lights without rebuilding the scene (look calibration). */
@@ -218,7 +272,143 @@ export class LiveRenderer {
     if (look.hemi && this.hemi) this.hemi.intensity = look.hemi.intensity;
     if (look.key && this.key) this.key.intensity = look.key.intensity;
     if (look.shadow_radius !== undefined && this.key) this.key.shadow.radius = look.shadow_radius;
-    if (look.shadow_opacity !== undefined) for (const c of this.catchers) c.opacity = look.shadow_opacity;
+    if (look.shadow_opacity !== undefined) {
+      this.catcherOpacity = look.shadow_opacity;
+      for (const c of this.catchers) c.opacity = this.catcherOpacity * (1 - Math.max(0, this.freeK));
+    }
+  }
+
+  /** 0: moving parts over the RTX plate (the hero view); 1: the whole scene drawn here (orbiting). */
+  setFreeLook(k: number): void {
+    if (k === this.freeK) return;
+    const on = k > 0;
+    for (const s of this.statics) {
+      s.copy.visible = on;
+      (s.copy.material as THREE.Material).opacity = s.opacity * k;
+      s.pre.castShadow = on; // the static shadows the plate holds path traced, drawn here
+    }
+    // the catchers darken the RTX plate; the copies take their own shadows
+    for (const c of this.catchers) c.opacity = this.catcherOpacity * (1 - k);
+    if (this.backdrop) {
+      this.backdrop.visible = on;
+      this.backdrop.material.uniforms.opacity.value = k;
+    }
+    if (this.ink3d) {
+      this.ink3d.mesh.visible = on;
+      (this.ink3d.mesh.material as THREE.Material).opacity = k;
+    }
+    this.freeK = k;
+  }
+
+  /** RTX's surroundings around the camera, at the distance of the sky: the free view's background. */
+  private addBackdrop(): void {
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        map: { value: null },
+        hasMap: { value: 0 },
+        color: { value: new THREE.Color(0x1a1b1e) },
+        opacity: { value: 0 },
+      },
+      vertexShader: `
+        varying vec3 vDir;
+        void main() {
+          vDir = position;
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }`,
+      fragmentShader: `
+        uniform sampler2D map;
+        uniform float hasMap;
+        uniform vec3 color;
+        uniform float opacity;
+        varying vec3 vDir;
+        #include <common>
+        void main() {
+          vec3 w = normalize(vDir);
+          // the world is z-up; the probe is stored in three's y-up environment space
+          // (world = (ex, -ez, ey), the environmentRotation below)
+          vec3 d = vec3(w.x, w.z, -w.y);
+          vec3 c = hasMap > 0.5 ? textureLod(map, equirectUv(d), 0.0).rgb : color;
+          gl_FragColor = vec4(c, opacity);
+          #include <colorspace_fragment>
+        }`,
+      side: THREE.BackSide,
+      transparent: true,
+      depthWrite: false,
+      toneMapped: false, // an RTX picture, shown as rendered
+    });
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 64, 32), mat);
+    mesh.scale.setScalar(0.5 * this.camera.far);
+    mesh.position.copy(this.camera.position);
+    mesh.renderOrder = -20;
+    mesh.frustumCulled = false;
+    mesh.visible = false;
+    this.scene.add(mesh);
+    this.backdrop = mesh;
+    this.freeK = -1;
+  }
+
+  /** The wipe's ink for the free view: one patch per cell on the bar's decal surface. At the
+   * hero view the RTX plate and its compositor show the ink; these are drawn only off it. */
+  addInk3d(cells: number[][], barPose: number[], radius: number, pitch: number, taint: number[]): void {
+    const n = cells.length;
+    const pos = new Float32Array(n * 12);
+    const nrm = new Float32Array(n * 12);
+    const col = new Float32Array(n * 16);
+    const idx: number[] = [];
+    const q = new THREE.Quaternion(barPose[3], barPose[4], barPose[5], barPose[6]);
+    const p0 = new THREE.Vector3(barPose[0], barPose[1], barPose[2]);
+    const c = new THREE.Color().setRGB(taint[0], taint[1], taint[2], THREE.SRGBColorSpace);
+    const r = radius + 0.0003; // just proud of the bar, as the decal is
+    const dth = pitch / radius; // a cell is as wide around the bar as along it
+    const v = new THREE.Vector3();
+    for (let i = 0; i < n; i++) {
+      const [u, th] = cells[i];
+      const corners = [[u - pitch / 2, th - dth / 2], [u + pitch / 2, th - dth / 2], [u + pitch / 2, th + dth / 2], [u - pitch / 2, th + dth / 2]];
+      corners.forEach(([uu, tt], k) => {
+        const o = i * 4 + k;
+        // the bar's frame: its axis is local z, a cell at angle th sits at (r cos th, r sin th, u)
+        v.set(Math.cos(tt), Math.sin(tt), 0).applyQuaternion(q);
+        nrm.set([v.x, v.y, v.z], o * 3);
+        v.set(r * Math.cos(tt), r * Math.sin(tt), uu).applyQuaternion(q).add(p0);
+        pos.set([v.x, v.y, v.z], o * 3);
+        col.set([c.r, c.g, c.b, 0], o * 4);
+      });
+      idx.push(i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    g.setAttribute("normal", new THREE.BufferAttribute(nrm, 3));
+    const color = new THREE.BufferAttribute(col, 4);
+    color.setUsage(THREE.DynamicDrawUsage);
+    g.setAttribute("color", color);
+    g.setIndex(idx);
+    const m = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      transparent: true,
+      depthWrite: false,
+      roughness: 0.55,
+      metalness: 0,
+      side: THREE.DoubleSide,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      polygonOffsetUnits: -2,
+    });
+    const mesh = new THREE.Mesh(g, m);
+    mesh.renderOrder = 6; // over the bar's own copy
+    mesh.visible = false;
+    mesh.frustumCulled = false;
+    this.scene.add(mesh);
+    this.ink3d = { mesh, color, n };
+    this.freeK = -1;
+  }
+
+  /** The ink left per cell (0..1), for the free view's decal. */
+  setInk3d(I: ArrayLike<number>): void {
+    const d = this.ink3d;
+    if (!d) return;
+    const a = d.color.array as Float32Array;
+    for (let i = 0; i < d.n; i++) for (let k = 0; k < 4; k++) a[(i * 4 + k) * 4 + 3] = I[i];
+    d.color.needsUpdate = true;
   }
 
   /** A deformable surface: indexed triangles over ``vertexCount`` vertices, positions set per frame. */
@@ -423,6 +613,12 @@ export class LiveRenderer {
     });
     this.scene.clear();
     this.bodies.clear();
+    this.statics = [];
+    this.backdrop = null;
+    this.backdropTex?.dispose();
+    this.backdropTex = null;
+    this.ink3d = null;
+    this.freeK = 0;
     this.staticRoot = null;
     this.key = null;
     this.deform = null;

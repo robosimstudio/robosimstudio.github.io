@@ -38,6 +38,9 @@ body {
 #stage.dragging {
   cursor: grabbing;
 }
+#stage.orbiting {
+  cursor: move;
+}
 
 /* One 1920x1080 box, placed by a single transform; every layer fills it, so the
    RTX frames and the live render line up by construction. */
