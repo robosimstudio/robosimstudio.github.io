@@ -212,7 +212,7 @@ def build(demo: str, rounds=("r1",), attract_round: str = "attract", n_stills: i
         pv = np.linalg.norm(np.diff(W, axis=0), axis=2).max(axis=1) * 30.0
         pv = np.concatenate([[pv[0] if len(pv) else 0.0], pv])
         hs = np.linalg.norm(hv[sel], axis=1)
-        calm = (hs < 0.003) & (pv < 0.005)
+        calm = (hs < 0.003) & (pv < float(getattr(spec, "settle_deform_speed", 0.005)))
         run = np.zeros(len(calm), dtype=np.int64)
         for i in range(len(calm)):
             run[i] = run[i - 1] + 1 if (calm[i] and i) else int(calm[i])

@@ -16,6 +16,7 @@ class Spec(BenchTrack):
     RUN = paths.GALLERY / "runs" / "tool_sort__syringe__R__a0"
     LEGACY = True
     HERO_CAMERA = "agentview"
+    HERO_FOV_SCALE = 32.0 / 45.0  # 16:9 at the gallery's 45 left the syringe a speck (sheets 09-30)
 
     def static(self) -> dict:
         return {}

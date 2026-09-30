@@ -112,7 +112,7 @@ def run_trial(page, rng, span: float) -> tuple[list[dict], float]:
 
 
 def score(trials: list[tuple[list[dict], float]]) -> dict:
-    err_all, err_slow, jumps, trans_rate, stall_n, held_n, settle_t, settle_ok = [], [], [], [], 0, 0, [], 0
+    err_all, err_slow, jumps, trans_rate, stall_n, held_n, settle_t, settle_ok, live_rest = [], [], [], [], 0, 0, [], 0, 0
     for samples, released in trials:
         held = [s for s in samples if s["held"] and s.get("hand")]
         for i, s in enumerate(held):
@@ -138,13 +138,15 @@ def score(trials: list[tuple[list[dict], float]]) -> dict:
         if hit is not None and hit["wall"] - released <= 2.5:
             settle_ok += 1
             settle_t.append(hit["wall"] - released)
+        elif any(s.get("restLive") for s in after):
+            live_rest += 1  # no still near where the ball stopped: it rests live, by design
     mm = lambda xs, q: round(float(np.percentile(np.asarray(xs) * 1e3, q)), 1) if xs else None  # noqa: E731
     return {
         "follow_mm": {"median": mm(err_all, 50), "p90": mm(err_all, 90), "slow_median": mm(err_slow, 50), "slow_p90": mm(err_slow, 90)},
         "transitions_per_s": round(float(np.median(trans_rate)), 2) if trans_rate else None,
         "jump_mm": {"mean": round(float(np.mean(jumps)) * 1e3, 1) if jumps else None, "p95": mm(jumps, 95), "n": len(jumps)},
         "stall_fraction": round(stall_n / max(1, held_n), 4),
-        "settle": {"success": f"{settle_ok}/{len(trials)}", "median_s": round(float(np.median(settle_t)), 2) if settle_t else None},
+        "settle": {"success": f"{settle_ok}/{len(trials)}", "rest_live": live_rest, "median_s": round(float(np.median(settle_t)), 2) if settle_t else None},
     }
 
 

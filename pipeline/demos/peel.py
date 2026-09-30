@@ -215,6 +215,9 @@ class Spec:
         eye = look + 1.25 * (n * 0.40 + np.array([0.0, 0.0, 0.05]))
         return {"look_at": look.tolist(), "eye": eye.tolist(), "fov_y": 38.0}
 
+    settle_deform_speed = 0.02
+    """A peeled film hanging off the tab sways at a few mm/s and never passes the default 5 mm/s: the
+    end of the peel -- its climax -- had no still (0 of 450 past a 0.24)."""
     one_way_slack = 0.01
     """A film does not re-stick: the visitor's tab may not go back up the arc more than 1 cm behind
     the furthest it has pulled (harness 09-30: two-way drags asked for peel histories the takes do

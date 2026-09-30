@@ -15,6 +15,7 @@ class Spec(BenchTrack):
     RUN = paths.GALLERY / "runs" / "usbc_insert__port__MOR__a0"
     LEGACY = True
     HERO_CAMERA = "overview"
+    HERO_FOV_SCALE = 36.0 / 45.0  # tighter; 32 and below cut the carried plug (sheets 09-30)
 
     def static(self) -> dict:
         return {}

@@ -31,6 +31,7 @@ TITLES = {
     "scissors": "Hang the scissors",
     "usbc": "Plug in USB-C",
     "syringe": "Dispose of the syringe",
+    "crate": "Flip the crate",
 }
 
 

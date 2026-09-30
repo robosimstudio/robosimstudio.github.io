@@ -86,6 +86,9 @@ export class FreeDragDemo implements Demo {
   private oneWaySlack: number | null = null;
   private aMax = Number.NEGATIVE_INFINITY;
   private stillFrames: Int32Array | null = null;
+  /** At rest with no still within SNAP_R of the ball: stay live (as the whip does) until the ball
+   * moves or is grabbed. Seeking a far still made the peel's hand jump back 2-3 cm and cycle. */
+  private restLive = false;
   private stillFramesN = -1;
   private nTransitions = 0; // for the harness: how many jumps, and the last one's size [m]
   private lastJump = 0;
@@ -332,11 +335,11 @@ export class FreeDragDemo implements Demo {
     if (this.stillAlpha > 0) this.stillInk?.draw(I);
   }
 
-  /** Start easing the ball onto the nearest still-set hand, if one is within SNAP_R. */
-  private snapToStill(): void {
+  /** Start easing the ball onto the nearest still-set hand, if one is within SNAP_R; false if none. */
+  private snapToStill(): boolean {
     const store = this.store;
     const still = store?.still;
-    if (!store || !still) return;
+    if (!store || !still) return false;
     if (this.stillFramesN !== store.n) {
       const f: number[] = [];
       for (let i = 0; i < store.n; i++) if (still[i] >= 0) f.push(i);
@@ -356,7 +359,7 @@ export class FreeDragDemo implements Demo {
         best = i;
       }
     }
-    if (best < 0) return;
+    if (best < 0) return false;
     // (a, b) with origin + a A + b B closest to that hand: the 2x2 normal equations
     // (A is not a unit vector on the peel's arc)
     const { origin: o, A, B } = this.drag;
@@ -364,10 +367,11 @@ export class FreeDragDemo implements Demo {
     const dot = (u: ArrayLike<number>, v: ArrayLike<number>) => u[0] * v[0] + u[1] * v[1] + u[2] * v[2];
     const gaa = dot(A, A), gab = dot(A, B), gbb = dot(B, B), ha = dot(h, A), hb = dot(h, B);
     const det = gaa * gbb - gab * gab;
-    if (!(Math.abs(det) > 1e-12)) return;
+    if (!(Math.abs(det) > 1e-12)) return false;
     const to = this.drag.clamp((ha * gbb - hb * gab) / det, (hb * gaa - ha * gab) / det);
-    if (this.oneWaySlack !== null && to[0] < this.aMax - this.oneWaySlack) return; // behind the film's front
+    if (this.oneWaySlack !== null && to[0] < this.aMax - this.oneWaySlack) return false; // behind the film's front
     this.snap = { from: [ab[0], ab[1]], to: [to[0], to[1]], t: 0 };
+    return true;
   }
 
   /** Clamp a target to the one-way rule and advance the furthest point. */
@@ -446,11 +450,16 @@ export class FreeDragDemo implements Demo {
       const pred = this.predictDisp();
       // a demo with no still set (the whip: its cable never comes to rest) stays live at rest
       const hasStills = (this.m.stills?.files?.length ?? 0) > 0;
-      const mode = this.grab || !hasStills ? "active" : this.settle.update(speed, pred.slice(6, 9), dt);
+      if (this.restLive && (this.grab || speed > 0.015)) this.restLive = false; // the ball moves again
+      const mode = this.grab || !hasStills || this.restLive ? "active" : this.settle.update(speed, pred.slice(6, 9), dt);
       if (mode === "settling" && this.mode === "live") {
-        this.mode = "settling";
-        this.framesSinceSearch = 99;
-        this.snapToStill();
+        if (this.snapToStill()) {
+          this.mode = "settling";
+          this.framesSinceSearch = 99;
+        } else {
+          this.restLive = true;
+          this.settle.wake();
+        }
       }
       if (this.framesSinceSearch >= (this.m.match?.every_frames ?? 3) || player.runway() < 4) this.search(pred);
       if (this.mode === "settling" && this.stillIndex >= 0) this.maybeDissolve();
@@ -812,6 +821,7 @@ export class FreeDragDemo implements Demo {
       lastSettle: this.lastSettle,
       targetWorld: this.drag.toWorld(this.target[0], this.target[1]),
       transitions: this.nTransitions,
+      restLive: this.restLive,
       // screen px (RTX frame) per metre along each drag axis, and the drag box: a harness's
       // gestures follow the demo's own axes (the peel runs down the phone, the wipe along the bar)
       axesPx: (() => {
