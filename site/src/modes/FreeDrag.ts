@@ -44,6 +44,13 @@ const FD_HORIZONS = [6, 12, 20];
 const IDLE_TO_ATTRACT_S = 20;
 const DISSOLVE_IN_S = 0.4;
 const DISSOLVE_OUT_S = 0.15;
+/** A fresh stripe, as the booth's ``new_stripe``: when a finger lands on a bar that is mostly clean
+ * (under half the ink left), and when a finished wipe (under 5 % left) has rested this long. */
+const REINK_ON_GRAB_BELOW = 0.5;
+const REINK_DONE_BELOW = 0.05;
+const REINK_REST_S = 2.5;
+const REINK_GRAB_FADE_S = 0.35;
+const REINK_REST_FADE_S = 0.8;
 
 export class FreeDragDemo implements Demo {
   private mode: Mode = "boot";
@@ -68,6 +75,9 @@ export class FreeDragDemo implements Demo {
   private ink: InkField | null = null;
   private bgInk: InkComposite | null = null;
   private stillInk: InkComposite | null = null;
+  private reinkFade = 0; // [s] of the re-ink fade still to run, and its length
+  private reinkLen = 0;
+  private restClean = 0; // [s] at rest with a finished wipe
   private pca: { mean: Float32Array; basis: Float32Array; K: number; V: number; frame: string; arm: string; tube: boolean } | null = null;
   private moving: number[];
   private target: [number, number];
@@ -257,11 +267,43 @@ export class FreeDragDemo implements Demo {
     this.prevHand = [h[0], h[1], h[2]];
     const row = store.inkStateRow(f);
     if (this.ink && row) this.ink.setFromState(row);
-    this.bgInk?.draw(this.ink!.I);
+    if (this.ink && this.inkLeft() < REINK_ON_GRAB_BELOW) this.startReink(REINK_GRAB_FADE_S);
+    if (this.ink) this.bgInk?.draw(this.ink.I);
     this.stage.video.pause();
     this.videoAlpha = 0;
     this.mode = "live";
     this.framesSinceSearch = 99;
+  }
+
+  private inkLeft(): number {
+    const I = this.ink!.I;
+    let s = 0;
+    for (let c = 0; c < I.length; c++) s += I[c];
+    return s / Math.max(1, I.length);
+  }
+
+  private startReink(len: number): void {
+    this.reinkLen = len;
+    this.reinkFade = len;
+  }
+
+  /** Run the re-ink fade, and start one after a finished wipe has rested. */
+  private stepReink(dt: number): void {
+    if (!this.ink) return;
+    if (this.reinkFade <= 0) {
+      const resting = this.mode === "still" && !this.grab;
+      this.restClean = resting && this.inkLeft() < REINK_DONE_BELOW ? this.restClean + dt : 0;
+      if (this.restClean < REINK_REST_S) return;
+      this.restClean = 0;
+      this.startReink(REINK_REST_FADE_S);
+    }
+    const step = Math.min(dt, this.reinkFade) / this.reinkLen;
+    this.reinkFade -= dt;
+    const I = this.ink.I;
+    for (let c = 0; c < I.length; c++) I[c] = Math.min(1, I[c] + step);
+    this.ink.changed = true;
+    this.bgInk?.draw(I);
+    if (this.stillAlpha > 0) this.stillInk?.draw(I);
   }
 
   private wake(): void {
@@ -285,6 +327,7 @@ export class FreeDragDemo implements Demo {
     const { stage } = this;
     if (this.mode === "boot" && this.dataReady) return; // pinned by showFrame (calibration)
     this.fade(dt);
+    if (this.mode !== "attract" && this.dataReady) this.stepReink(dt);
     if (this.mode === "attract" || !this.dataReady) {
       this.drawBallAttract();
       return;
