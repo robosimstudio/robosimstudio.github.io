@@ -63,8 +63,21 @@ def fit_plant(hand: list[np.ndarray], setp: list[np.ndarray]) -> dict:
         rhs.append((x[2:] - x[1:-1]).reshape(-1))
     A, y = np.concatenate(rows), np.concatenate(rhs)
     sol, *_ = np.linalg.lstsq(A, y, rcond=None)
-    resid = y - A @ sol
-    return {"alpha": float(sol[0]), "beta": float(sol[1]), "rms_step_mm": float(np.sqrt(np.mean(resid**2)) * 1e3)}
+    alpha, beta = float(sol[0]), float(sol[1])
+    if beta >= 0.99:
+        # The browser iterates this 20 steps ahead: beta >= 1 grows the velocity (1.11**20 ~ 8x).
+        # The whip's joint lead (q + tau dq) puts its hand ahead of the setpoint, which a free fit
+        # reads as beta 1.11. Keep the best stable model: beta searched below 0.99, alpha refit.
+        best = None
+        for bb in np.linspace(0.0, 0.99, 100):
+            r = y - bb * A[:, 1]
+            aa = float(A[:, 0] @ r / max(1e-12, float(A[:, 0] @ A[:, 0])))
+            e = float(np.mean((r - aa * A[:, 0]) ** 2))
+            if best is None or e < best[0]:
+                best = (e, aa, float(bb))
+        alpha, beta = best[1], best[2]
+    resid = y - A @ np.array([alpha, beta])
+    return {"alpha": alpha, "beta": beta, "rms_step_mm": float(np.sqrt(np.mean(resid**2)) * 1e3)}
 
 
 def pca_fit(X: np.ndarray, p999_max: float = 0.0015, tail_mm: float = 0.004, tail_frac: float = 0.005,

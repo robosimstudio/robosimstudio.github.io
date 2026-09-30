@@ -144,7 +144,7 @@ def _shade(points: np.ndarray, faces: np.ndarray, flat: bool):
     return points, faces, np.asarray(m.vertex_normals), np.arange(len(points))
 
 
-def export_scene(demo: str, sim, out: Path, moving: list[int], canon: dict) -> dict:
+def export_scene(demo: str, sim, out: Path, moving: list[int], canon: dict, skip_bodies: set[int] = frozenset()) -> dict:
     import newton
     from robosimstudio.core.render.finish import finish_for
     from .compat import box_projected_uvs, planar_uvs
@@ -179,6 +179,9 @@ def export_scene(demo: str, sim, out: Path, moving: list[int], canon: dict) -> d
             skipped["live"] += 1
             continue
         b = int(shape_body[s])
+        if b in skip_bodies:
+            skipped["drawn_elsewhere"] = skipped.get("drawn_elsewhere", 0) + 1
+            continue
         if b >= 0 and float(body_q[b][2]) > PARK_Z:
             skipped["parked"] += 1
             continue
@@ -284,7 +287,9 @@ def export_scene(demo: str, sim, out: Path, moving: list[int], canon: dict) -> d
     info = {
         "canonical_take": canon["_take"],
         "nodes": nodes,
-        "moving": sorted(per_body),
+        # everything that moves (the plate and the probe hide it), including bodies drawn another
+        # way and so missing from ``nodes`` (the whip's capsules)
+        "moving": sorted(set(int(m) for m in moving) | set(per_body)),
         "skipped": skipped,
         "triangles": tri_count,
         "materials": len(glb.doc["materials"]),

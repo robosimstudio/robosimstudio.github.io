@@ -56,7 +56,9 @@ class Spec:
     deform_kind = "tube"
     tube_color = (0.015, 0.015, 0.017)
     plans_takes = True
-    hp_scale = 0.008  # a sparser database (0.4 s a step) of fast strokes: coarser position matching
+    match_weights = {"dm": 0.1, "dv": 0.05}
+    """The cable's shape is chaotic: matching it tightly forced jumps (harness 09-30, 4 visitor
+    takes: hp 8 mm scale -> jumps 19.7/46.4 mm; hp 4 mm with these -> 11.8/27.8 mm)."""
 
     # ---------------------------------------------------------------- build
     def build(self, device=None):
@@ -151,6 +153,10 @@ class Spec:
 
     def to_world(self, arm, ab: np.ndarray) -> np.ndarray:
         return np.array([float(ab[0]), 0.0, float(ab[1])])
+
+    def tube_body_indices(self) -> list[int]:
+        """The cable's capsules: drawn by the page as a tube through their centres."""
+        return [int(b) for b in np.asarray(self.cable.bodies)]
 
     def drag_affine(self, static: dict) -> tuple[list, list, list]:
         """``to_world``: the held point's x and z, in the cable's plane y = 0."""

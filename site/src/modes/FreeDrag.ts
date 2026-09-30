@@ -444,7 +444,9 @@ export class FreeDragDemo implements Demo {
       // the snap's easing is the page's own motion, not the visitor's: it must not wake a settle
       const speed = snapping ? 0 : Math.hypot(va * A[0] + vb * B[0], va * A[1] + vb * B[1], va * A[2] + vb * B[2]);
       const pred = this.predictDisp();
-      const mode = this.grab ? "active" : this.settle.update(speed, pred.slice(6, 9), dt);
+      // a demo with no still set (the whip: its cable never comes to rest) stays live at rest
+      const hasStills = (this.m.stills?.files?.length ?? 0) > 0;
+      const mode = this.grab || !hasStills ? "active" : this.settle.update(speed, pred.slice(6, 9), dt);
       if (mode === "settling" && this.mode === "live") {
         this.mode = "settling";
         this.framesSinceSearch = 99;

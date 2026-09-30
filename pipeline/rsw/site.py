@@ -43,13 +43,14 @@ pick was a visible jump (mean 27 mm; 3.4 mm at a 4 mm scale, settles 5/12 -> 12/
 HP_SCALE = 0.004
 
 
-def _weigh(features: dict, hp_scale: float) -> dict:
+def _weigh(features: dict, hp_scale: float, overrides: dict | None = None) -> dict:
     out = json.loads(json.dumps(features))
+    rel = {**MATCH_WEIGHTS, **(overrides or {})}
     for g in out["groups"]:
         if g["name"] == "hp":
             g["w"] = round((float(g["sigma"]) / hp_scale) ** 2, 3)
-        elif g["name"] in MATCH_WEIGHTS:
-            g["w"] = MATCH_WEIGHTS[g["name"]]
+        elif g["name"] in rel:
+            g["w"] = rel[g["name"]]
     return out
 
 
@@ -208,7 +209,7 @@ def assemble_free(demo: str) -> dict:
             "v_max": 1.5,
             **({"one_way_slack": float(spec.one_way_slack)} if getattr(spec, "one_way_slack", None) is not None else {}),
         },
-        "features": _weigh(db["features"], float(getattr(spec, "hp_scale", HP_SCALE))),
+        "features": _weigh(db["features"], float(getattr(spec, "hp_scale", HP_SCALE)), getattr(spec, "match_weights", None)),
         "match": {"every_frames": 3, "accept_ratio": 0.85, "accept_margin": 0.05, "min_gap_frames": 6,
                   "same_take_window": 15, "min_runway": 10, "start_guard": 30},
         "settle": {"enter_speed": 0.005, "enter_s": 0.15, "exit_speed": 0.015, "max_wait_s": 1.5, "dissolve_s": 0.4},
@@ -324,8 +325,10 @@ def look_from_rtx(rig: dict, D: Path) -> dict:
         "key": {"pos": pc, "target": [pc[0], pc[1], rig["surface_z"] + 0.15], "intensity": 2.4 * key, "color": [1.0, 0.97, 0.92]},
         "hemi": {"sky": [0.94, 0.95, 0.97], "ground": [0.42, 0.41, 0.40], "intensity": 0.55 * amb},
         "env_intensity": 0.35,
-        "shadow_radius": 6,
-        "shadow_opacity": 0.28,
+        # soft, as the wipe's fit found (PCF 12.45 -> VSM 11.98): RTX's key is a large panel
+        "shadow_map": "vsm",
+        "shadow_radius": 28,
+        "shadow_opacity": 0.21,
     }
 
 

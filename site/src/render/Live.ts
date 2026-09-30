@@ -35,6 +35,10 @@ export interface LookJson {
   hemi?: { sky: number[]; ground: number[]; intensity: number };
   env_intensity?: number;
   shadow_radius?: number;
+  /** "vsm": a variance shadow map, blurred wide -- RTX's key is a 1.4 x 0.9 m panel, whose
+   * penumbra under an arm 30 cm up is ~0.3 m, not the silhouette a sharp map draws. */
+  shadow_map?: "pcf" | "vsm";
+  shadow_map_size?: number;
   shadow_opacity?: number;
   /** RTX's own surroundings, seen from the robot's middle (``rsw envprobe``): an equirect in
    * three.js's Y-up env space; replaces the generic RoomEnvironment once it has loaded. */
@@ -107,6 +111,7 @@ export class LiveRenderer {
 
   setLook(look: LookJson, base = ""): void {
     this.renderer.toneMappingExposure = look.exposure ?? 1.0;
+    this.renderer.shadowMap.type = look.shadow_map === "vsm" ? THREE.VSMShadowMap : THREE.PCFShadowMap;
     const pm = new THREE.PMREMGenerator(this.renderer);
     this.envTex = pm.fromScene(new RoomEnvironment(), 0.04).texture;
     pm.dispose();
@@ -139,8 +144,10 @@ export class LiveRenderer {
     key.position.set(k.pos[0], k.pos[1], k.pos[2]);
     key.target.position.set(k.target[0], k.target[1], k.target[2]);
     key.castShadow = true;
-    key.shadow.mapSize.set(2048, 2048);
+    const ms = look.shadow_map_size ?? (look.shadow_map === "vsm" ? 512 : 2048);
+    key.shadow.mapSize.set(ms, ms);
     key.shadow.radius = look.shadow_radius ?? 4;
+    if (look.shadow_map === "vsm") key.shadow.blurSamples = 20;
     key.shadow.bias = -0.0004;
     key.shadow.normalBias = 0.01;
     const sc = key.shadow.camera as THREE.OrthographicCamera;

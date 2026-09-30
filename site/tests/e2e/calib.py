@@ -54,11 +54,12 @@ def main(argv=None) -> int:
         "hemi": look["hemi"]["intensity"],
         "env": look.get("env_intensity", 0.35),
         "shadow": look.get("shadow_opacity", 0.28),
+        "shadow_r": look.get("shadow_radius", 6),
     }
 
     def as_look(pr: dict) -> dict:
         return {"exposure": pr["exposure"], "key": {"intensity": pr["key"]}, "hemi": {"intensity": pr["hemi"]},
-                "env_intensity": pr["env"], "shadow_opacity": pr["shadow"]}
+                "env_intensity": pr["env"], "shadow_opacity": pr["shadow"], "shadow_radius": pr["shadow_r"]}
 
     with sync_playwright() as pw:
         b = pw.chromium.launch(args=GPU_ARGS)
@@ -108,6 +109,7 @@ def main(argv=None) -> int:
     fitted["hemi"] = dict(man["look"]["hemi"], intensity=params["hemi"])
     fitted["env_intensity"] = params["env"]
     fitted["shadow_opacity"] = params["shadow"]
+    fitted["shadow_radius"] = params["shadow_r"]
     fitted["calib_loss"] = best
     (out / "look.json").write_text(json.dumps(fitted, indent=1))
     Image.fromarray(np.concatenate([live, ref], axis=1).clip(0, 255).astype(np.uint8)).resize((1920, 540)).save(out / "compare.png")

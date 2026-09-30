@@ -41,8 +41,12 @@ def _export(argv: list[str]) -> int:
     sim = spec.build()
     canon = export.canonical(a.demo)
     moving, dev = export.moving_bodies(a.demo)
-    print(f"[export] canonical frame from {canon['_take']}; moving bodies {moving}")
-    info = export.export_scene(a.demo, sim, out, moving, canon)
+    # bodies the page draws another way (the whip's capsules: its tube) stay out of the GLB, or
+    # they stand there at their canonical pose -- nothing on the page poses a free body
+    # (they stay in ``moving``: the plate and the probe hide what moves)
+    drawn = set(int(b) for b in (spec.tube_body_indices() if hasattr(spec, "tube_body_indices") else []))
+    print(f"[export] canonical frame from {canon['_take']}; moving bodies {moving}; drawn as a tube {sorted(drawn)}")
+    info = export.export_scene(a.demo, sim, out, moving, canon, skip_bodies=drawn)
     print("[export]", json.dumps({k: v for k, v in info.items() if k != "deformables"}))
     if export.is_track(a.demo):
         return 0

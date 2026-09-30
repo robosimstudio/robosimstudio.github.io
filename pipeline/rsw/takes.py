@@ -118,7 +118,8 @@ def run_session(demo: str, out_root: Path, seed: int, n_takes: int, take_seconds
         rec.close(meta)
         print(f"[rsw] {demo} s{seed} take {k}: {rec.n} steps in {wall:.0f}s ({rec.n / wall:.1f}/s)"
               f"{', gate: ' + fail if fail else ''}{f', ink parity {parity:.2e}' if parity else ''}", flush=True)
-        if fail and any(fail.startswith(f) for f in SESSION_FATAL):
+        # a take that resets to a fresh episode (towel, peel) starts clean after any failure
+        if fail and any(fail.startswith(f) for f in SESSION_FATAL) and not getattr(spec, "fresh_episode_per_take", False):
             break
     (sdir / "DONE").write_text(f"{time.time():.0f}\n")
     return sdir
