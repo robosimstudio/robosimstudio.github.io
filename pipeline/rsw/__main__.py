@@ -206,6 +206,9 @@ def _probe(argv: list[str]) -> int:
     (out / "workspace.json").write_text(json.dumps(res))
     import numpy as np
 
+    if "score_mm_plus_halfdeg" not in res:  # a demo-specific report (the towel's go/no-go)
+        print("[probe]", json.dumps(res))
+        return 0
     g = np.asarray(res["score_mm_plus_halfdeg"])
     print("[probe] rows z, cols x; cell = worst IK mm + 0.5*deg over the leans")
     print("       " + " ".join(f"{x:6.2f}" for x in res["xs"]))
