@@ -110,6 +110,46 @@ class Hand:
         self.page.mouse.up()
 
 
+def axes(page) -> dict:
+    """The free demo's drag axes on screen: CSS px per metre along a and b, and the box."""
+    st = json.loads(page.evaluate("() => JSON.stringify(window.__rsw.debugState())"))
+    sc = float(st["scale"])
+    return {"A": [v * sc for v in st["axesPx"]["A"]], "B": [v * sc for v in st["axesPx"]["B"]], "box": st["box"], "t": st["target"]}
+
+
+def pick(page, hand: "Hand", demo: str) -> None:
+    tile = page.locator(f"#picker [data-id='{demo}']").first
+    tile.scroll_into_view_if_needed()
+    tb = tile.bounding_box()
+    hand.to(tb["x"] + tb["width"] / 2, tb["y"] + tb["height"] / 2, 0.7)
+    page.mouse.click(hand.x, hand.y)
+
+
+def free_drag(page, hand: "Hand", moves: list[tuple[float, float, float]], settle: float = 2.5) -> None:
+    """Grab the ball and move it by (da, db) metres along the demo's own axes, each over s seconds."""
+    ax = axes(page)
+    bx, by = center(page, ".ball")
+    hand.to(bx, by, 0.6)
+    hand.down()
+    for da, db, sec in moves:
+        hand.to(hand.x + da * ax["A"][0] + db * ax["B"][0], hand.y + da * ax["A"][1] + db * ax["B"][1], sec)
+    hand.up()
+    hand.to(hand.x + 150, hand.y + 120, 0.5)
+    hand.wait(settle)
+
+
+def scrub(page, hand: "Hand", dx: float, dy: float) -> None:
+    hx, hy = center(page, ".handle")
+    hand.to(hx, hy, 0.6)
+    hand.down()
+    hand.to(hx + dx, hy + dy, 1.6)
+    hand.wait(0.3)
+    hand.to(hx + dx * 0.3, hy + dy * 0.3, 1.2)
+    hand.up()
+    hand.to(hand.x + 180, hand.y + 150, 0.5)
+    hand.wait(2.5)
+
+
 def center(page, sel: str) -> tuple[float, float]:
     b = page.locator(sel).first.bounding_box()
     return b["x"] + b["width"] / 2, b["y"] + b["height"] / 2
@@ -119,6 +159,7 @@ def main(argv=None) -> int:
     p = argparse.ArgumentParser()
     p.add_argument("--url", default="https://keplerc.github.io/robosimstudio-website/")
     p.add_argument("--out", default="/tmp/rsw_visit")
+    p.add_argument("--tour", action="store_true", help="every free drag, then two rollouts")
     a = p.parse_args(argv)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -139,6 +180,33 @@ def main(argv=None) -> int:
             beats.append((round(time.time() - t0, 2), name))
 
         cast.start()
+        if a.tour:
+            page.goto(f"{a.url}#wipe")
+            page.wait_for_function("() => { const b = document.querySelector('.ball'); return b && b.style.display !== 'none' && b.style.width; }", timeout=60000)
+            hand.jump(W * 0.62, H * 0.80)
+            beat("wipe: attract"); hand.wait(3.0)
+            beat("wipe: drag")
+            free_drag(page, hand, [(0.0, -0.02, 0.5), (0.08, -0.02, 1.3), (-0.12, -0.02, 1.6), (0.10, 0.0, 1.3), (0.0, 0.06, 0.6)])
+            for demo, moves in (("peel", [(0.06, 0.0, 1.5), (0.06, 0.004, 1.5), (0.05, -0.004, 1.4)]),
+                                ("whip", [(0.10, 0.0, 0.35), (-0.14, 0.0, 0.4), (0.12, 0.02, 0.4), (-0.08, 0.0, 0.35)]),
+                                ("towel", [(0.0, 0.12, 1.2), (0.18, 0.04, 1.6), (0.0, -0.10, 1.0), (-0.12, 0.05, 1.4)])):
+                beat(f"{demo}: pick"); pick(page, hand, demo)
+                page.wait_for_function("() => { const b = document.querySelector('.ball'); return b && b.style.display !== 'none' && b.style.width; }", timeout=60000)
+                hand.to(W * 0.55, H * 0.55, 0.6); hand.wait(3.0)
+                beat(f"{demo}: drag"); free_drag(page, hand, moves, settle=3.0)
+            for demo, (dx, dy) in (("gears", (-120, 60)), ("crate", (-160, 20))):
+                beat(f"{demo}: pick"); pick(page, hand, demo)
+                page.wait_for_selector(".handle", state="attached", timeout=60000)
+                hand.to(W * 0.55, H * 0.55, 0.6); hand.wait(4.0)
+                beat(f"{demo}: scrub"); scrub(page, hand, dx, dy)
+            cast.stop()
+            b.close()
+            mp4 = out / "visit.mp4"
+            cast.encode(mp4)
+            (out / "timeline.json").write_text(json.dumps({"beats": beats, "frames": len(cast.stamps),
+                                                            "console": [x for x in logs if "error" in x.lower()][:20]}, indent=1))
+            print(json.dumps({"mp4": str(mp4), "bytes": mp4.stat().st_size, "frames": len(cast.stamps), "beats": beats}, indent=1))
+            return 0
         page.goto(f"{a.url}#wipe")
         page.wait_for_function("() => { const b = document.querySelector('.ball'); return b && b.style.display !== 'none' && b.style.width; }", timeout=60000)
         beat("wipe: attract video (RTX)")

@@ -198,6 +198,8 @@ export class FreeDragDemo implements Demo {
       });
     }
 
+    stage.bgInk.style.display = m.ink ? "" : "none";
+    stage.stillInk.style.display = m.ink ? "" : "none";
     if (m.ink) {
       const cells = (m.ink.cells as number[][]).length;
       this.ink = new InkField(cells, 1 / 30);
@@ -851,6 +853,10 @@ export class FreeDragDemo implements Demo {
 
   dispose(): void {
     this.disposed = true;
+    this.bgInk?.clear();
+    this.stillInk?.clear();
+    this.stage.bgInk.style.display = "";
+    this.stage.stillInk.style.display = "";
     this.stage.live.reset();
     this.ball.dispose();
     this.stage.video.pause();

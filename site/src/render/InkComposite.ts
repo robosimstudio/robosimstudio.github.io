@@ -66,4 +66,10 @@ export class InkComposite {
   show(on: boolean): void {
     this.canvas.style.display = on ? "" : "none";
   }
+
+  /** Blank the canvas: the stage's ink canvases outlive a demo, and the last crop drawn on them
+   *  would otherwise sit over the next demo's picture (the wipe's stripe did, on every demo after it). */
+  clear(): void {
+    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+  }
 }
