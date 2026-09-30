@@ -1,0 +1,13 @@
+# data never lives in git: it is built under ~/rss_ws/rsw_data and deployed to gh-pages
+build/
+dist/
+node_modules/
+*.glb
+*.webp
+*.mp4
+*.gz
+*.npz
+*.npy
+__pycache__/
+.ruff_cache/
+.venv/

@@ -1,0 +1,264 @@
+:root {
+  --bg: #0b0c0e;
+  --fg: #f2f2f3;
+  --muted: #9a9ca3;
+  --accent: #ff8c00;
+  --accent-held: #ff4628;
+  --tile-w: 148px;
+  --tile-h: 83px;
+  --picker-pad: 14px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: grab;
+}
+#stage.dragging {
+  cursor: grabbing;
+}
+
+/* One 1920x1080 box, placed by a single transform; every layer fills it, so the
+   RTX frames and the live render line up by construction. */
+.plate {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 1920px;
+  height: 1080px;
+  transform-origin: 0 0;
+  background: #1a1b1e;
+}
+.layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+.layer.bg,
+.layer.still,
+.layer.vid {
+  object-fit: fill;
+}
+.layer.ink {
+  /* sized and positioned to the stripe's box by the ink compositor */
+  inset: auto;
+}
+.layer.still,
+.layer.vid {
+  opacity: 0;
+}
+.layer.hidden {
+  visibility: hidden;
+}
+
+#overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.ball {
+  position: absolute;
+  left: 0;
+  top: 0;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #ffd4a3 0%, var(--accent) 38%, #c55f00 100%);
+  box-shadow:
+    0 2px 10px rgba(0, 0, 0, 0.45),
+    0 0 0 2px rgba(255, 255, 255, 0.18) inset;
+  opacity: 0.88;
+  transform: translate(-50%, -50%);
+  will-change: transform;
+}
+.ball.held {
+  background: radial-gradient(circle at 32% 30%, #ffc3b5 0%, var(--accent-held) 40%, #a82a12 100%);
+}
+.ball .halo {
+  position: absolute;
+  inset: -60%;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 140, 0, 0.55);
+  animation: halo 1.8s ease-out infinite;
+}
+@keyframes halo {
+  0% {
+    transform: scale(0.55);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ball .halo {
+    animation: none;
+    opacity: 0.5;
+  }
+}
+.handle {
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  margin: -11px 0 0 -11px;
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  background: rgba(255, 140, 0, 0.18);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.5);
+}
+.tether {
+  position: absolute;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.35);
+  transform-origin: 0 50%;
+}
+
+#loading {
+  position: absolute;
+  right: 18px;
+  top: 18px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+#loading.on {
+  opacity: 1;
+}
+#loading .ring {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255, 255, 255, 0.18);
+  border-top-color: var(--accent);
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+#wordmark {
+  position: fixed;
+  left: max(14px, env(safe-area-inset-left));
+  top: max(12px, env(safe-area-inset-top));
+  width: 190px;
+  color: var(--fg);
+  opacity: 0.72;
+  z-index: 5;
+  pointer-events: none;
+}
+#wordmark svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
+}
+
+#picker {
+  position: fixed;
+  left: 50%;
+  bottom: max(var(--picker-pad), env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  padding: 8px;
+  max-width: calc(100vw - 24px);
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  background: rgba(10, 11, 13, 0.55);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 14px;
+  z-index: 6;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  transition: opacity 0.25s;
+}
+#picker::-webkit-scrollbar {
+  display: none;
+}
+#stage.dragging ~ #picker {
+  opacity: 0.3;
+}
+.tile {
+  position: relative;
+  flex: 0 0 auto;
+  width: var(--tile-w);
+  height: var(--tile-h);
+  border-radius: 9px;
+  overflow: hidden;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  background: #16171a;
+  scroll-snap-align: center;
+  outline: 2px solid transparent;
+  outline-offset: 1px;
+  transition:
+    outline-color 0.2s,
+    transform 0.2s;
+}
+.tile:hover {
+  transform: translateY(-2px);
+}
+.tile.active {
+  outline-color: var(--accent);
+}
+.tile video,
+.tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.tile span {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 14px 8px 5px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  text-align: left;
+  color: #fff;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.72));
+}
+
+/* Portrait phones: the stage on top, the picker below it. */
+@media (max-aspect-ratio: 1/1) {
+  :root {
+    --tile-w: 116px;
+    --tile-h: 65px;
+  }
+  #picker {
+    border-radius: 12px;
+  }
+  #wordmark {
+    width: 150px;
+  }
+}

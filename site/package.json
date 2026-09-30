@@ -1,0 +1,28 @@
+{
+  "name": "robosimstudio-website",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run",
+    "eval": "node --experimental-strip-types tools/eval/harness.ts"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "n8ao": "2.0.1",
+    "postprocessing": "6.39.5",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.5.2",
+    "@types/three": "0.186.0",
+    "sirv": "3.0.2",
+    "typescript": "6.0.3",
+    "vite": "8.3.1",
+    "vitest": "5.0.3"
+  }
+}

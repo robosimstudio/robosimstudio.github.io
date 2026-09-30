@@ -1,0 +1,238 @@
+// A track demo: a recorded, successful rollout.
+//
+//   PLAYING  the RTX rollout video.
+//   SCRUB    the finger took a gripper handle (or dragged the stage): live 3D of
+//            the moving bodies over the RTX plate, at the dragged time.
+//   PAUSED   let go: snap to a frame, seek the video there exactly (keyframe every
+//            8 frames), dissolve it in. Space plays and pauses; arrows step.
+
+import type { Demo, Stage } from "../app/App.ts";
+import { toStage, type Placement } from "../app/layout.ts";
+import { fetchRssb } from "../data/fetch.ts";
+import { Camera } from "../core/camera.ts";
+import { Scrubber } from "../core/scrubber.ts";
+
+type Mode = "playing" | "scrub" | "paused";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Manifest = any;
+
+const RESUME_AFTER_S = 8;
+
+export class TrackDemo implements Demo {
+  private stage: Stage;
+  private m: Manifest;
+  private base: string;
+  private mode: Mode = "playing";
+  private camera: Camera;
+  private bodies: Uint32Array = new Uint32Array(0);
+  private poses: Float32Array = new Float32Array(0);
+  private eePx: Float32Array = new Float32Array(0);
+  private H = 1;
+  private N = 0;
+  private t = 0;
+  private scrubber: Scrubber | null = null;
+  private handles: HTMLDivElement[] = [];
+  private grab: { handle: number; relative: boolean; lastPx: [number, number] } | null = null;
+  private lastInput = 0;
+  private videoAlpha = 1;
+  private seekToken = 0;
+  private ready = false;
+  private disposed = false;
+
+  constructor(stage: Stage, id: string, manifest: Manifest) {
+    this.stage = stage;
+    this.m = manifest;
+    this.base = stage.base(id);
+    this.camera = new Camera(manifest.camera);
+  }
+
+  roi(): [number, number, number, number] {
+    return this.m.roi;
+  }
+
+  async start(): Promise<void> {
+    const { stage, m, base } = this;
+    stage.live.setCamera(m.camera);
+    stage.live.setLook(m.look ?? {});
+    stage.bg.src = base + m.files.plate;
+    stage.still.style.opacity = "0";
+    stage.bgInk.style.display = "none";
+    stage.stillInk.style.display = "none";
+    const v = stage.video;
+    v.loop = true;
+    v.src = base + m.files.video;
+    v.style.opacity = "1";
+    void v.play().catch(() => undefined);
+    const [_, state, paths] = await Promise.all([
+      stage.live.loadGlb(base + m.files.glb, m.nodes, m.look?.shadow_opacity ?? 0.28),
+      fetchRssb(base + m.files.state),
+      fetchRssb(base + m.files.paths),
+    ]);
+    if (this.disposed) return;
+    this.bodies = state.arrays.bodies.data as Uint32Array;
+    this.poses = state.arrays.body_q.data as Float32Array;
+    this.N = state.arrays.body_q.shape[0];
+    const px = paths.arrays.ee_px;
+    this.eePx = px.data as Float32Array;
+    this.H = px.shape[1];
+    this.scrubber = new Scrubber(this.eePx, this.N, this.H, { fps: 30 });
+    for (let h = 0; h < this.H; h++) {
+      const d = document.createElement("div");
+      d.className = "handle";
+      stage.overlay.appendChild(d);
+      this.handles.push(d);
+    }
+    this.ready = true;
+  }
+
+  pointerDown(e: PointerEvent, rtx: [number, number]): void {
+    if (!this.ready) return;
+    this.lastInput = performance.now();
+    const f = this.currentFrame();
+    let best = -1;
+    let bestD = Infinity;
+    for (let h = 0; h < this.H; h++) {
+      const u = this.eePx[(f * this.H + h) * 2];
+      const v = this.eePx[(f * this.H + h) * 2 + 1];
+      const d = Math.hypot(rtx[0] - u, rtx[1] - v) * this.stage.placement().s;
+      if (d < bestD) {
+        bestD = d;
+        best = h;
+      }
+    }
+    const near = bestD <= (e.pointerType === "touch" ? 40 : 24);
+    this.grab = { handle: near ? best : 0, relative: !near, lastPx: [rtx[0], rtx[1]] };
+    this.t = f;
+    this.enterScrub();
+  }
+
+  pointerMove(e: PointerEvent, rtx: [number, number]): void {
+    if (!this.grab || !this.scrubber) return;
+    this.lastInput = performance.now();
+    if (this.grab.relative) {
+      const dx = (rtx[0] - this.grab.lastPx[0]) * this.stage.placement().s;
+      this.t = Math.min(this.N - 1, Math.max(0, this.t + this.scrubber.relative(dx, this.stage.placement().stageW, this.N - 1)));
+    } else {
+      this.t = this.scrubber.nearest(rtx, this.t, this.grab.handle);
+    }
+    this.grab.lastPx = [rtx[0], rtx[1]];
+    this.scrubber.flick.push(e.timeStamp / 1000, this.t, 0);
+  }
+
+  pointerUp(e: PointerEvent): void {
+    if (!this.grab || !this.scrubber) return;
+    this.grab = null;
+    this.lastInput = performance.now();
+    if (!this.scrubber.flick.release(e.timeStamp / 1000)) this.snap();
+  }
+
+  key(e: KeyboardEvent): void {
+    if (e.code === "Space") {
+      e.preventDefault();
+      if (this.mode === "playing") this.pauseAt(this.currentFrame());
+      else this.play();
+    } else if (e.code === "ArrowRight" || e.code === "ArrowLeft") {
+      const f = Math.min(this.N - 1, Math.max(0, Math.round(this.currentFrame()) + (e.code === "ArrowRight" ? 1 : -1)));
+      this.pauseAt(f);
+    }
+  }
+
+  private currentFrame(): number {
+    if (this.mode === "playing") return Math.min(this.N - 1, Math.max(0, Math.floor(this.stage.video.currentTime * 30 + 1e-3)));
+    return Math.round(this.t);
+  }
+
+  private enterScrub(): void {
+    this.stage.video.pause();
+    this.videoAlpha = 0;
+    this.mode = "scrub";
+    this.seekToken++;
+  }
+
+  private snap(): void {
+    this.pauseAt(Math.round(this.t));
+  }
+
+  private pauseAt(f: number): void {
+    this.t = f;
+    this.mode = "paused";
+    const token = ++this.seekToken;
+    const v = this.stage.video;
+    v.pause();
+    const done = () => {
+      if (token !== this.seekToken) return;
+      this.videoAlpha = 1;
+    };
+    v.addEventListener("seeked", done, { once: true });
+    v.currentTime = (f + 0.5) / 30;
+  }
+
+  private play(): void {
+    const v = this.stage.video;
+    v.currentTime = (Math.round(this.t) + 0.5) / 30;
+    this.videoAlpha = 1;
+    this.mode = "playing";
+    void v.play().catch(() => undefined);
+  }
+
+  frame(_now: number, dt: number): void {
+    if (!this.ready) return;
+    const v = this.stage.video;
+    const cur = Number(v.style.opacity || "0");
+    v.style.opacity = String(this.videoAlpha > cur ? Math.min(1, cur + dt / 0.3) : Math.max(0, cur - dt / 0.15));
+    if (this.scrubber?.flick.active && !this.grab) {
+      if (!this.scrubber.flick.coast(dt)) this.snap();
+      else this.t = Math.min(this.N - 1, Math.max(0, this.scrubber.flick.x[0]));
+    }
+    if (this.mode === "paused" && performance.now() - this.lastInput > RESUME_AFTER_S * 1000) this.play();
+    const f = this.currentFrame();
+    if (this.mode !== "playing") this.poseAt(this.t);
+    this.drawHandles(f);
+  }
+
+  private poseAt(t: number): void {
+    const i0 = Math.max(0, Math.min(this.N - 1, Math.floor(t)));
+    const i1 = Math.min(this.N - 1, i0 + 1);
+    const a = t - i0;
+    const nb = this.bodies.length;
+    for (let k = 0; k < nb; k++) {
+      const o0 = (i0 * nb + k) * 7;
+      const o1 = (i1 * nb + k) * 7;
+      const P = this.poses;
+      const p = [0, 1, 2].map((j) => P[o0 + j] * (1 - a) + P[o1 + j] * a);
+      let q = [3, 4, 5, 6].map((j) => P[o0 + j]);
+      const q1 = [3, 4, 5, 6].map((j) => P[o1 + j]);
+      const dot = q[0] * q1[0] + q[1] * q1[1] + q[2] * q1[2] + q[3] * q1[3];
+      const sgn = dot < 0 ? -1 : 1;
+      q = q.map((x, j) => x * (1 - a) + sgn * q1[j] * a);
+      const n = Math.hypot(q[0], q[1], q[2], q[3]) || 1;
+      this.stage.live.setBody(this.bodies[k], p, q.map((x) => x / n));
+    }
+    this.stage.live.render();
+  }
+
+  private drawHandles(f: number): void {
+    const pl = this.stage.placement();
+    for (let h = 0; h < this.H; h++) {
+      const u = this.eePx[(f * this.H + h) * 2];
+      const v = this.eePx[(f * this.H + h) * 2 + 1];
+      const [x, y] = toStage(pl, u, v);
+      this.handles[h].style.transform = `translate(${x}px, ${y}px)`;
+    }
+  }
+
+  resize(p: Placement): void {
+    this.stage.live.resize(1920 * p.s, 1080 * p.s, window.devicePixelRatio || 1);
+  }
+
+  dispose(): void {
+    this.disposed = true;
+    this.stage.live.reset();
+    for (const h of this.handles) h.remove();
+    this.stage.video.pause();
+    this.stage.video.removeAttribute("src");
+    this.stage.video.load();
+    this.stage.bgInk.style.display = "";
+    this.stage.stillInk.style.display = "";
+  }
+}
