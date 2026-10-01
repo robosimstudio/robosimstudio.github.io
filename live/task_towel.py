@@ -40,9 +40,64 @@ RESCUE_GAP = 10.0
 """Seconds between two watchdog rescues: a towel that breaks again at once is not rescued in a loop."""
 
 
+LOOK = "fluffy"
+"""How the towel is drawn (the studio's garment styles): ``fluffy`` is the core plus translucent pile
+shells and a sprinkle of soft fuzz points (the user's "bubbles"), ``shell`` the core alone."""
+
+
+FUZZ_CAP = 12_000
+"""Fuzz points on the towel (the studio's own cap is 48,000). Every point is re-sent every frame:
+48,000 cost 4.7 MB/s per viewer (measured); fewer, proportionally larger points keep the same cover."""
+
+
+def lighter_fuzz(cap: int) -> str:
+    """Fewer, larger fuzz points: same coverage, a fraction of the bytes. The studio reads these
+    module constants when it lays out the fuzz and draws it, so setting them here is enough."""
+    import robosimstudio_studio.garments as g
+
+    base_cap = 48_000
+    scale = (base_cap / max(cap, 1)) ** 0.5
+    g.FUZZ_CAP = int(cap)
+    g.FUZZ_POINT_SIZE = 0.0017 * scale
+    g.FUZZ_TUFT_SIZE = 0.0024 * scale
+    return f"{cap} fuzz points at {1000 * g.FUZZ_POINT_SIZE:.1f}/{1000 * g.FUZZ_TUFT_SIZE:.1f} mm"
+
+
+STILL_MM = 1.0
+"""The towel's drawing is re-sent only once a point has moved this far [mm] since the last one sent
+(or it was shown or hidden). The studio re-sends the whole garment -- core, pile shells, fuzz --
+every frame, and for a towel lying still that was all of its 0.5-4.7 MB/s a viewer (measured)."""
+
+
+def send_only_motion(viewer, still: float = STILL_MM / 1000.0) -> None:
+    """Wrap the viewer's per-garment draw so frames that would repeat the last one sent are skipped.
+    viser keeps every node's last state for late joiners, so nothing is lost by not re-sending it."""
+    draw_garment = viewer._draw_garment
+    sent: dict[str, tuple[np.ndarray, bool]] = {}
+
+    def draw(garment, points, hidden) -> None:
+        last = sent.get(garment.name)
+        if (last is not None and last[1] == hidden and last[0].shape == points.shape
+                and float(np.abs(points - last[0]).max()) < still):
+            return
+        sent[garment.name] = (np.array(points, copy=True), hidden)
+        draw_garment(garment, points, hidden)
+
+    viewer._draw_garment = draw
+
+
 def main(opts, rest) -> int:
-    del rest
+    import argparse
+
     import wipe_phone as wp
+
+    p = argparse.ArgumentParser()
+    p.add_argument("--look", choices=("fluffy", "shell", "flat"), default=LOOK)
+    p.add_argument("--fuzz-cap", type=int, default=FUZZ_CAP)
+    a = p.parse_known_args(rest)[0]
+    look = a.look
+    if look == "fluffy":
+        print(f"[live] towel look: fluffy, {lighter_fuzz(a.fuzz_cap)}", flush=True)
 
     wp.WORDS["towel"] = WORDS
     pages.phone_opts(opts, "towel", attract=60.0)
@@ -62,6 +117,7 @@ def main(opts, rest) -> int:
             self._rescued_at = -1e9
             """When the watchdog last laid a fresh towel (wall clock)."""
             super().__init__(sim, config=config, opts=opts)
+            send_only_motion(self.viewer)
             self.setup_text = "Setting up -- the robot is taking the towel's edge..."
             if "stats" in self.phone_widgets:  # drawn by the base page with the sponge's words
                 self.phone_widgets["stats"].content = self.setup_text
@@ -207,4 +263,4 @@ def main(opts, rest) -> int:
     mid = np.asarray(q[np.asarray(dh.particles)].mean(axis=0), dtype=np.float64)
     wp.VIEWS["towel"] = (tuple((mid + np.array([0.0, 0.0, -0.04])).tolist()), (0.66, 0.0, 0.46))
     print(f"[phone] scene built in {pages.stamp(t)}", flush=True)
-    return pages.serve(TowelSession, env, opts)
+    return pages.serve(TowelSession, env, opts, cloth_look=look)
