@@ -15,6 +15,7 @@ TASKS=(
   "phone 1 8102"
   "peel  5 8103 --render-every 1 --attract 600"
   "towel 6 8104"
+  "cable 4 8105"
 )
 mkdir -p "$RSW_LIVE"/{gw,www,logs,run}
 cp "$LIVE/www/index.html" "$RSW_LIVE/www/index.html"

@@ -53,7 +53,7 @@
   <header>
     <h1>RoboSimStudio <span>live</span></h1>
     <p>Each of these is a physics simulation running right now on its own GPU. Open one and drag the orange
-      ball: the robot follows at its real speed limit, and the sponge, film or towel answers with simulated physics.</p>
+      ball: the robot follows at its real speed limit, and the sponge, film, towel or cable answers with simulated physics.</p>
   </header>
   <div class="grid" id="grid"></div>
   <footer>
@@ -67,6 +67,7 @@
     { id: "phone", title: "Wipe a phone", what: "Slide the sponge across a phone's glass to clear its smudges.", speed: "~0.6× real time" },
     { id: "peel", title: "Peel the film", what: "Pull the protective film off a phone's screen, one adhesive bond at a time.", speed: "slow motion, ~0.1×" },
     { id: "towel", title: "Fold the towel", what: "Lift the towel's edge and carry it over to fold the cloth in half.", speed: "~0.45× real time" },
+    { id: "cable", title: "Route the cable", what: "Lift a cable off the bench and lay it into three clips, in order.", speed: "~0.95× real time" },
   ];
   // Served from this machine the tasks are subdomains of it; served anywhere else, of the default.
   const HOST = /sslip\.io$/.test(location.hostname) ? location.hostname : "95-133-252-186.sslip.io";

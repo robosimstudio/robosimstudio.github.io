@@ -50,6 +50,9 @@
 	handle /status/towel {
 		import status 8104
 	}
+	handle /status/cable {
+		import status 8105
+	}
 	handle {
 		root * {$RSW_LIVE}/www
 		file_server
@@ -74,4 +77,9 @@ peel.{$RSW_HOST} {
 towel.{$RSW_HOST} {
 	import site
 	reverse_proxy 127.0.0.1:8104
+}
+
+cable.{$RSW_HOST} {
+	import site
+	reverse_proxy 127.0.0.1:8105
 }
