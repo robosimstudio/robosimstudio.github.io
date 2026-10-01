@@ -37,6 +37,10 @@ ATTRACT_KEYS = (
 )
 """The website's autopilot (``demos/towel.py``): lift the edge, fold it over, lift it off again,
 lay it back. (a, b) keys and the seconds to each, eased."""
+RESET_EVERY = 4
+"""Autopilot laps per fresh towel. A lap lays the edge back where it started, so a new towel (a
+~30 s grasp the page can't be driven through) after every lap is waste; the cloth does pick up
+wrinkles, so every 4th lap gets one. "New towel" always lays one."""
 
 
 def build_env() -> Env:
@@ -114,6 +118,8 @@ class Towel:
         """The ball: the hands' midpoint should go to ``cursor - ball``."""
         self.reset_request = False
         self.hz = hz
+        self.laps = 0
+        self.lap_done = False
 
     # -- geometry ---------------------------------------------------------------
     def point(self, a: float, b: float, c: float = 0.0) -> np.ndarray:
@@ -176,6 +182,12 @@ class Towel:
         return {"cleared_fraction": float(np.clip(a / max(self.length, 1e-6), 0.0, 1.0))}
 
     def new_stripe(self) -> None:
+        """"New towel", or the autopilot's lap just ended (the page calls this for both)."""
+        if self.lap_done:
+            self.lap_done = False
+            self.laps += 1
+            if self.laps % RESET_EVERY:
+                return  # the lap laid the edge back: keep this towel a while
         self.reset_request = True  # a new towel is a new episode: the session lays it out
 
     def attract(self):
@@ -189,6 +201,7 @@ class Towel:
                 ab = cur + (nxt - cur) * s
                 yield self.clamp(self.point(float(ab[0]), float(ab[1])) + self.ball)
             cur = nxt
+        self.lap_done = True  # read by the new_stripe the page calls next
 
     def broken_state(self) -> bool:
         q = self.particles()
@@ -247,7 +260,7 @@ def view(towel: Towel) -> tuple[tuple[float, ...], tuple[float, ...]]:
     """(look-at, eye offset): from the bench's open side (+C; the arms stand on the far one), so
     the fold carries the edge right to left and a lift reads up; aimed a little below the towel
     so it sits above a phone's sheet."""
-    look = towel.point(0.45 * towel.length, -0.04)
+    look = towel.point(0.25 * towel.length, -0.04)  # nearer the hand: a phone held upright sees ~0.38 m across
     offset = towel.C * 0.66 + np.array([0.0, 0.0, 0.46])
     return tuple(look.tolist()), tuple(offset.tolist())
 

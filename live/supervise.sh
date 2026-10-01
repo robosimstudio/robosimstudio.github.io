@@ -5,13 +5,16 @@
 # $RUN/current_url.txt. The phone demo's supervisor, for live/launch.py.
 #
 #   TASK=towel GPU=6 PORT=8104 nohup setsid live/supervise.sh > /dev/null 2>&1 &
+#   TASK=towel GPU=6 PORT=8104 PUBLIC_URL=https://towel.<host>/ nohup setsid live/supervise.sh ...
+#     behind the gateway (live/Caddyfile): no relay link, and the public check is that address
 #   kill $(cat ~/rss_ws/rsw_live/run/towel/supervisor.pid)   # stop it (takes the task down with it)
 set -u
 LIVE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$HOME/rss_ws/RoboSimStudio"
 ROOT="${RSW_LIVE:-$HOME/rss_ws/rsw_live}"
 TASK="${TASK:?set TASK=bar|phone|peel|towel}"; NAME="${NAME:-$TASK}"
-GPU="${GPU:?set GPU}"; PORT="${PORT:?set PORT}"
+GPU="${GPU:?set GPU}"; PORT="${PORT:?set PORT}"; PUBLIC_URL="${PUBLIC_URL:-}"
+SHARE=(--share); [ -n "$PUBLIC_URL" ] && SHARE=()
 case "$GPU" in 0|1|5|6|7) ;; *) echo "GPU $GPU is not ours (2-4 run the conference phone demos)" >&2; exit 2;; esac
 RUN="$ROOT/run/$NAME"; LOG="$RUN/serve.log"; EV="$RUN/supervisor.log"; URLF="$RUN/current_url.txt"
 mkdir -p "$RUN"; echo $$ > "$RUN/supervisor.pid"
@@ -27,14 +30,14 @@ while true; do
   [ -f "$LOG" ] && mv "$LOG" "$RUN/serve.prev.log"
   rm -f "$URLF"
   (cd "$REPO" && CUDA_VISIBLE_DEVICES="$GPU" exec setsid .venv/bin/python "$LIVE/launch.py" \
-    --task "$TASK" --name "$NAME" --port "$PORT" --share "$@") > "$LOG" 2>&1 &
+    --task "$TASK" --name "$NAME" --port "$PORT" "${SHARE[@]}" "$@") > "$LOG" 2>&1 &
   pid=$!
   started=$(date +%s); url=""; ready=0; fails=0
   say "START run=$n pid=$pid gpu=$GPU port=$PORT"
   while kill -0 "$pid" 2>/dev/null; do
     sleep 15
     now=$(date +%s)
-    cur=$(cat "$URLF" 2>/dev/null)
+    cur=${PUBLIC_URL:-$(cat "$URLF" 2>/dev/null)}
     if [ -n "$cur" ] && [ "$cur" != "$url" ]; then
       url="$cur"; fails=0; say "URL $url"
       [ "$ready" = 1 ] && say "READY $url"
@@ -51,14 +54,17 @@ while true; do
       say "HANG no log for ${age} s; restarting"; stop_task "$pid"; break
     fi
     # A failed public check counts only while the page answers on its own port: then it is the
-    # relay. A page busy with a long setup answers neither, and HANG covers a real hang.
+    # relay (or the gateway). A page busy with a long setup answers neither, and HANG covers a
+    # real hang. Behind the gateway a restart cannot mend the public side, so it is only logged.
     if [ -n "$url" ] && [ "$ready" = 1 ]; then
       if curl -fsS -m 20 -o /dev/null "$url"; then
         fails=0
       elif curl -fsS -m 10 -o /dev/null "http://localhost:$PORT"; then
         fails=$((fails + 1))
       fi
-      if [ "$fails" -ge 8 ]; then
+      if [ "$fails" -ge 8 ] && [ -n "$PUBLIC_URL" ]; then
+        [ "$fails" = 8 ] && say "UNREACHABLE $url for ~$((fails * 15)) s (the gateway, not the page)"
+      elif [ "$fails" -ge 8 ]; then
         say "UNREACHABLE $url for ~$((fails * 15)) s; restarting"; stop_task "$pid"; break
       fi
     fi

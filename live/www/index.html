@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RoboSimStudio Live</title>
+<meta name="description" content="Robot simulations running live on GPUs. Drag the robot and feel the physics.">
+<style>
+  :root {
+    --bg: #f4f4f2; --card: #ffffff; --ink: #18181b; --muted: #5f5f66; --line: #e2e2de;
+    --accent: #ff8c00; --live: #16a34a; --wait: #a1a1aa; --shade: rgba(24, 24, 27, 0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111113; --card: #1b1b1e; --ink: #ececee; --muted: #a1a1aa; --line: #2c2c31; --shade: rgba(0, 0, 0, 0.4);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #111113; --card: #1b1b1e; --ink: #ececee; --muted: #a1a1aa; --line: #2c2c31; --shade: rgba(0, 0, 0, 0.4);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 1120px; margin: 0 auto; padding: 40px 16px 56px; }
+  header { margin-bottom: 28px; }
+  h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h1 span { color: var(--accent); }
+  header p { margin: 0; color: var(--muted); max-width: 64ch; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 16px; }
+  a.card {
+    display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--card);
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  a.card:hover, a.card:focus-visible { transform: translateY(-2px); box-shadow: 0 8px 24px var(--shade); outline: none; }
+  .shot { aspect-ratio: 16 / 10; background: linear-gradient(135deg, #3f3f46, #71717a); position: relative; }
+  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px; }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--wait); flex: none; }
+  .dot.live { background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 25%, transparent); }
+  .what { color: var(--muted); font-size: 15px; margin: 0; flex: 1; }
+  .meta { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+  .meta b { color: var(--accent); font-weight: 600; }
+  footer { margin-top: 28px; color: var(--muted); font-size: 14px; }
+  footer p { margin: 0 0 6px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>RoboSimStudio <span>live</span></h1>
+    <p>Each of these is a physics simulation running right now on its own GPU. Open one and drag the orange
+      ball: the robot follows at its real speed limit, and the sponge, film or towel answers with simulated physics.</p>
+  </header>
+  <div class="grid" id="grid"></div>
+  <footer>
+    <p>One person drives a task at a time; everyone else watches the same simulation live.</p>
+    <p>Drag empty space to look around. The simulations run slower than real time, and each page shows its own speed.</p>
+  </footer>
+</main>
+<script>
+  const TASKS = [
+    { id: "bar", title: "Wipe the bar", what: "Press a foam sponge onto a chrome bar and wipe the marker stripe off.", speed: "~0.6× real time" },
+    { id: "phone", title: "Wipe a phone", what: "Slide the sponge across a phone's glass to clear its smudges.", speed: "~0.6× real time" },
+    { id: "peel", title: "Peel the film", what: "Pull the protective film off a phone's screen, one adhesive bond at a time.", speed: "slow motion, ~0.1×" },
+    { id: "towel", title: "Fold the towel", what: "Lift the towel's edge and carry it over to fold the cloth in half.", speed: "~0.45× real time" },
+  ];
+  // Served from this machine the tasks are subdomains of it; served anywhere else, of the default.
+  const HOST = /sslip\.io$/.test(location.hostname) ? location.hostname : "95-133-252-186.sslip.io";
+  const grid = document.getElementById("grid");
+  for (const t of TASKS) {
+    const url = `https://${t.id}.${HOST}/`;
+    const a = document.createElement("a");
+    a.className = "card";
+    a.href = url;
+    a.innerHTML = `
+      <div class="shot"><img src="img/${t.id}.jpg" alt="" loading="lazy" onerror="this.remove()"></div>
+      <div class="body">
+        <div class="title"><span class="dot" title="checking"></span>${t.title}</div>
+        <p class="what">${t.what}</p>
+        <div class="meta"><span>${t.speed}</span><b>Open &rarr;</b></div>
+      </div>`;
+    grid.appendChild(a);
+    // the gateway's status route: 204 when the task's page answers, 502 when it is down or restarting
+    const dot = a.querySelector(".dot");
+    fetch(`https://${HOST}/status/${t.id}`, { cache: "no-store" })
+      .then((r) => {
+        dot.classList.toggle("live", r.ok);
+        dot.title = r.ok ? "running" : "starting up";
+      })
+      .catch(() => { dot.title = "starting up"; });
+  }
+</script>
+</body>
+</html>

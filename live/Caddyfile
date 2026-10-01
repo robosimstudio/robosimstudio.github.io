@@ -1,0 +1,77 @@
+# The gateway: one HTTPS address per live task, plus a landing page, on port 443.
+# Certificates come from Let's Encrypt (TLS-ALPN on 443; port 80 stays shut), renewed by Caddy.
+# RSW_HOST names this machine (sslip.io resolves "95-133-252-186.sslip.io" to 95.133.252.186).
+# Started by live/up.sh.
+{
+	admin localhost:2019
+	storage file_system {$RSW_LIVE}/caddy-data
+	# port 80 is shut: an HTTP-01 attempt only spends Let's Encrypt's failed-validation allowance
+	cert_issuer acme {
+		disable_http_challenge
+	}
+}
+
+# Is a task's page up? viser answers an unknown path with an empty 404 (passed on as 204), and
+# the gateway answers 502 when nothing listens: the landing page reads which, without fetching a
+# 3 MB page. Argument: the task's local port.
+(status) {
+	header Access-Control-Allow-Origin *
+	header Cache-Control no-store
+	rewrite * /rsw-status
+	reverse_proxy 127.0.0.1:{args[0]} {
+		@answered status 2xx 404
+		handle_response @answered {
+			respond 204
+		}
+	}
+}
+
+(site) {
+	encode zstd gzip
+	log {
+		output file {$RSW_LIVE}/logs/access.log {
+			roll_size 50MiB
+			roll_keep 5
+		}
+	}
+}
+
+{$RSW_HOST} {
+	import site
+	handle /status/bar {
+		import status 8101
+	}
+	handle /status/phone {
+		import status 8102
+	}
+	handle /status/peel {
+		import status 8103
+	}
+	handle /status/towel {
+		import status 8104
+	}
+	handle {
+		root * {$RSW_LIVE}/www
+		file_server
+	}
+}
+
+bar.{$RSW_HOST} {
+	import site
+	reverse_proxy 127.0.0.1:8101
+}
+
+phone.{$RSW_HOST} {
+	import site
+	reverse_proxy 127.0.0.1:8102
+}
+
+peel.{$RSW_HOST} {
+	import site
+	reverse_proxy 127.0.0.1:8103
+}
+
+towel.{$RSW_HOST} {
+	import site
+	reverse_proxy 127.0.0.1:8104
+}
