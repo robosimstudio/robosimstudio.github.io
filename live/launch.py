@@ -29,8 +29,8 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 PHONE = Path.home() / "rss_ws" / "phone_demo"
 RUN_ROOT = Path(os.environ.get("RSW_LIVE", Path.home() / "rss_ws" / "rsw_live"))
-ALLOWED_GPUS = {0, 1, 5, 6, 7}
-"""2-4 run the conference phone demos: never these."""
+ALLOWED_GPUS = set(range(8))
+"""All eight cards (2026-10-01: the user retired the conference phone demos on 2-4)."""
 
 sys.path.insert(0, str(PHONE))
 sys.path.insert(0, str(HERE))

@@ -15,7 +15,7 @@ ROOT="${RSW_LIVE:-$HOME/rss_ws/rsw_live}"
 TASK="${TASK:?set TASK=bar|phone|peel|towel}"; NAME="${NAME:-$TASK}"
 GPU="${GPU:?set GPU}"; PORT="${PORT:?set PORT}"; PUBLIC_URL="${PUBLIC_URL:-}"
 SHARE=(--share); [ -n "$PUBLIC_URL" ] && SHARE=()
-case "$GPU" in 0|1|5|6|7) ;; *) echo "GPU $GPU is not ours (2-4 run the conference phone demos)" >&2; exit 2;; esac
+case "$GPU" in [0-7]) ;; *) echo "GPU $GPU: no such card (0-7)" >&2; exit 2;; esac
 RUN="$ROOT/run/$NAME"; LOG="$RUN/serve.log"; EV="$RUN/supervisor.log"; URLF="$RUN/current_url.txt"
 mkdir -p "$RUN"; echo $$ > "$RUN/supervisor.pid"
 say() { echo "$(date '+%F %T') [$NAME] $*" >> "$EV"; }

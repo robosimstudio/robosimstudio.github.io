@@ -5,7 +5,7 @@
 #   live/up.sh towel      # just these tasks (the gateway too, if it is down)
 #   live/down.sh [task]   # stop them
 #
-# Task table: name, GPU, local port, extra page options. GPUs 2-4 run the conference phone demos.
+# Task table: name, GPU, local port, extra page options.
 set -u
 LIVE="$(cd "$(dirname "$0")" && pwd)"
 export RSW_LIVE="${RSW_LIVE:-$HOME/rss_ws/rsw_live}"
