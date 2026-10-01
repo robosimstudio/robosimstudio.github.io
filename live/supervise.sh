@@ -35,7 +35,7 @@ while true; do
   started=$(date +%s); url=""; ready=0; fails=0
   say "START run=$n pid=$pid gpu=$GPU port=$PORT"
   while kill -0 "$pid" 2>/dev/null; do
-    sleep 15
+    sleep 15 & wait $!  # a stop signal interrupts the wait at once (a foreground sleep would finish first)
     now=$(date +%s)
     cur=${PUBLIC_URL:-$(cat "$URLF" 2>/dev/null)}
     if [ -n "$cur" ] && [ "$cur" != "$url" ]; then
