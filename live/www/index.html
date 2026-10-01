@@ -2,98 +2,147 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>RoboSimStudio Live</title>
 <meta name="description" content="Robot simulations running live on GPUs. Drag the robot and feel the physics.">
 <style>
   :root {
-    --bg: #f4f4f2; --card: #ffffff; --ink: #18181b; --muted: #5f5f66; --line: #e2e2de;
-    --accent: #ff8c00; --live: #16a34a; --wait: #a1a1aa; --shade: rgba(24, 24, 27, 0.08);
+    --bar: #ffffff; --ink: #18181b; --muted: #6b6b73; --line: #e4e4e0; --tab-on: #18181b;
+    --tab-on-ink: #ffffff; --accent: #ff8c00; --live: #16a34a; --wait: #a1a1aa; --stage: #e9e9e6;
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #111113; --card: #1b1b1e; --ink: #ececee; --muted: #a1a1aa; --line: #2c2c31; --shade: rgba(0, 0, 0, 0.4);
+      --bar: #141416; --ink: #ececee; --muted: #a1a1aa; --line: #2a2a2f; --tab-on: #ececee;
+      --tab-on-ink: #141416; --stage: #1b1b1e;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #111113; --card: #1b1b1e; --ink: #ececee; --muted: #a1a1aa; --line: #2c2c31; --shade: rgba(0, 0, 0, 0.4);
+    --bar: #141416; --ink: #ececee; --muted: #a1a1aa; --line: #2a2a2f; --tab-on: #ececee;
+    --tab-on-ink: #141416; --stage: #1b1b1e;
   }
   * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
   body {
-    margin: 0; background: var(--bg); color: var(--ink);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; flex-direction: column; background: var(--stage); color: var(--ink); overflow: hidden;
+    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
-  main { max-width: 1120px; margin: 0 auto; padding: 40px 16px 56px; }
-  header { margin-bottom: 28px; }
-  h1 { font-size: clamp(26px, 4vw, 36px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
-  h1 span { color: var(--accent); }
-  header p { margin: 0; color: var(--muted); max-width: 64ch; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 16px; }
-  a.card {
-    display: flex; flex-direction: column; text-decoration: none; color: inherit; background: var(--card);
-    border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  header {
+    flex: none; display: flex; align-items: center; gap: 12px; padding: 8px 16px;
+    padding-top: max(8px, env(safe-area-inset-top)); background: var(--bar); border-bottom: 1px solid var(--line);
   }
-  a.card:hover, a.card:focus-visible { transform: translateY(-2px); box-shadow: 0 8px 24px var(--shade); outline: none; }
-  .shot { aspect-ratio: 16 / 10; background: linear-gradient(135deg, #3f3f46, #71717a); position: relative; }
-  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; flex: 1; }
-  .title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 18px; }
-  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--wait); flex: none; }
-  .dot.live { background: var(--live); box-shadow: 0 0 0 3px color-mix(in srgb, var(--live) 25%, transparent); }
-  .what { color: var(--muted); font-size: 15px; margin: 0; flex: 1; }
-  .meta { font-size: 13px; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
-  .meta b { color: var(--accent); font-weight: 600; }
-  footer { margin-top: 28px; color: var(--muted); font-size: 14px; }
-  footer p { margin: 0 0 6px; }
+  .mark { font-weight: 700; white-space: nowrap; letter-spacing: -0.01em; }
+  .mark span { color: var(--accent); }
+  nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+  nav::-webkit-scrollbar { display: none; }
+  nav button {
+    flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; cursor: pointer;
+  }
+  nav button:hover { border-color: var(--muted); }
+  nav button[aria-selected="true"] { background: var(--tab-on); border-color: var(--tab-on); color: var(--tab-on-ink); }
+  nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wait); flex: none; }
+  .dot.live { background: var(--live); }
+  .short { display: none; }
+  .hint { color: var(--muted); font-size: 13px; white-space: nowrap; }
+  main { flex: 1; position: relative; min-height: 0; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--stage); }
+  .note {
+    position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 16px;
+    color: var(--muted); background: var(--stage);
+  }
+  .note.on { display: grid; }
+  @media (max-width: 760px) {
+    header { gap: 8px; padding-left: 10px; padding-right: 10px; }
+    .hint { display: none; }
+    .long { display: none; }
+    .short { display: inline; }
+    nav button { padding: 6px 10px; }
+  }
+  @media (max-width: 560px) {
+    .mark { display: none; }
+    nav { justify-content: space-between; }
+    nav button { flex: 1; justify-content: center; }
+  }
+  @media (max-width: 360px) {
+    header { padding-left: 6px; padding-right: 6px; }
+    nav { gap: 4px; }
+    nav button { padding: 5px 6px; gap: 5px; font-size: 14px; }
+  }
 </style>
 </head>
 <body>
+<header>
+  <div class="mark">RoboSimStudio <span>live</span></div>
+  <nav id="tabs" role="tablist" aria-label="Demos"></nav>
+  <div class="hint">drag the orange ball &middot; one driver at a time</div>
+</header>
 <main>
-  <header>
-    <h1>RoboSimStudio <span>live</span></h1>
-    <p>Each of these is a physics simulation running right now on its own GPU. Open one and drag the orange
-      ball: the robot follows at its real speed limit, and the sponge, film, towel or cable answers with simulated physics.</p>
-  </header>
-  <div class="grid" id="grid"></div>
-  <footer>
-    <p>One person drives a task at a time; everyone else watches the same simulation live.</p>
-    <p>Drag empty space to look around. The simulations run slower than real time, and each page shows its own speed.</p>
-  </footer>
+  <iframe id="demo" title="Live simulation" allow="fullscreen; clipboard-write"></iframe>
+  <div class="note" id="note">This simulation is restarting. It will be back in a minute.</div>
 </main>
 <script>
-  const TASKS = [
-    { id: "bar", title: "Wipe the bar", what: "Press a foam sponge onto a chrome bar and wipe the marker stripe off.", speed: "~0.6× real time" },
-    { id: "phone", title: "Wipe a phone", what: "Slide the sponge across a phone's glass to clear its smudges.", speed: "~0.6× real time" },
-    { id: "peel", title: "Peel the film", what: "Pull the protective film off a phone's screen, one adhesive bond at a time.", speed: "~0.4× real time" },
-    { id: "towel", title: "Fold the towel", what: "Lift the towel by its edge and fold it over; a Softness slider runs it from canvas to silk.", speed: "~0.5× real time" },
-    { id: "cable", title: "Route the cable", what: "Lift a cable off the bench and lay it into three clips, in order.", speed: "~0.95× real time" },
+  // Each demo is one simulation on its own GPU, served at its own subdomain. The page shows one at
+  // a time (an open demo is a live stream) and keeps which one in the address (#towel).
+  const DEMOS = [
+    { id: "cable", title: "Route the cable", short: "Cable" },
+    { id: "towel", title: "Fold the towel", short: "Towel" },
+    { id: "bar", title: "Wipe the bar", short: "Wipe" },
+    { id: "peel", title: "Peel the film", short: "Peel" },
   ];
-  // Served from this machine the tasks are subdomains of it; served anywhere else, of the default.
   const HOST = /sslip\.io$/.test(location.hostname) ? location.hostname : "95-133-252-186.sslip.io";
-  const grid = document.getElementById("grid");
-  for (const t of TASKS) {
-    const url = `https://${t.id}.${HOST}/`;
-    const a = document.createElement("a");
-    a.className = "card";
-    a.href = url;
-    a.innerHTML = `
-      <div class="shot"><img src="img/${t.id}.jpg" alt="" loading="lazy" onerror="this.remove()"></div>
-      <div class="body">
-        <div class="title"><span class="dot" title="checking"></span>${t.title}</div>
-        <p class="what">${t.what}</p>
-        <div class="meta"><span>${t.speed}</span><b>Open &rarr;</b></div>
-      </div>`;
-    grid.appendChild(a);
-    // the gateway's status route: 204 when the task's page answers, 502 when it is down or restarting
-    const dot = a.querySelector(".dot");
-    fetch(`https://${HOST}/status/${t.id}`, { cache: "no-store" })
-      .then((r) => {
-        dot.classList.toggle("live", r.ok);
-        dot.title = r.ok ? "running" : "starting up";
-      })
-      .catch(() => { dot.title = "starting up"; });
+  const tabs = document.getElementById("tabs");
+  const frame = document.getElementById("demo");
+  const note = document.getElementById("note");
+  const live = {};
+
+  for (const d of DEMOS) {
+    const b = document.createElement("button");
+    b.setAttribute("role", "tab");
+    b.dataset.id = d.id;
+    b.innerHTML = `<span class="dot"></span><span class="long">${d.title}</span><span class="short">${d.short}</span>`;
+    b.addEventListener("click", () => { location.hash = d.id; });
+    tabs.appendChild(b);
   }
+
+  function current() {
+    const id = location.hash.slice(1);
+    return DEMOS.find((d) => d.id === id) || DEMOS[0];
+  }
+
+  function show() {
+    const d = current();
+    for (const b of tabs.children) b.setAttribute("aria-selected", String(b.dataset.id === d.id));
+    tabs.querySelector(`[data-id="${d.id}"]`).scrollIntoView({ block: "nearest", inline: "nearest" });
+    const url = `https://${d.id}.${HOST}/`;
+    if (frame.dataset.src !== url) {
+      frame.dataset.src = url;
+      frame.src = url;
+    }
+    document.title = `${d.title} · RoboSimStudio Live`;
+    note.classList.toggle("on", live[d.id] === false);
+  }
+
+  // Which simulations answer: the gateway's status route says 204 (up) or 502 (down or restarting).
+  async function poll() {
+    await Promise.all(DEMOS.map(async (d) => {
+      let up = false;
+      try {
+        up = (await fetch(`https://${HOST}/status/${d.id}`, { cache: "no-store" })).ok;
+      } catch (e) {
+        up = false;
+      }
+      if (live[d.id] === false && up && current().id === d.id) frame.dataset.src = "";  // back: reload it
+      live[d.id] = up;
+      tabs.querySelector(`[data-id="${d.id}"] .dot`).classList.toggle("live", up);
+    }));
+    show();
+  }
+
+  window.addEventListener("hashchange", show);
+  show();
+  poll();
+  setInterval(poll, 20000);
 </script>
 </body>
 </html>

@@ -30,6 +30,12 @@ SOFTNESS_MARKS = ((0, "canvas"), (100, "silk"))
 A third mark at 60 collided with "silk" in the phone page's narrow sheet."""
 
 
+SOFTNESS_IDLE_RESET = 60.0
+"""Seconds since anyone moved the slider before Softness goes back to the towel's own, once the page
+is idle (its autopilot is running). The setting is shared: the next visitor should meet the towel,
+not whatever the last one left (a test left it at silk)."""
+
+
 RESCUE_GAP = 10.0
 """Seconds between two watchdog rescues: a towel that breaks again at once is not rescued in a loop."""
 
@@ -51,6 +57,8 @@ def main(opts, rest) -> int:
             self.softness_slider = None
             self.softness_requests: collections.deque = collections.deque()
             """Values the slider's viser callbacks asked for; applied on the main thread."""
+            self.softness_default = self.softness
+            self._softness_moved_at = time.time()
             self._rescued_at = -1e9
             """When the watchdog last laid a fresh towel (wall clock)."""
             super().__init__(sim, config=config, opts=opts)
@@ -83,12 +91,18 @@ def main(opts, rest) -> int:
             self.softness_slider = slider
 
         def apply_softness(self) -> None:
-            """Main thread, every control step: the latest slider value, live on the towel."""
-            if not self.softness_requests or self.rig is None:
+            """Main thread, every control step: the latest slider value, live on the towel; back to
+            the towel's own once nobody is around (see ``SOFTNESS_IDLE_RESET``)."""
+            if self.rig is None:
                 return
-            value = int(self.softness_requests[-1])
-            self.softness_requests.clear()
-            self._set_softness(value)
+            if self.softness_requests:
+                value = int(self.softness_requests[-1])
+                self.softness_requests.clear()
+                self._softness_moved_at = time.time()
+                self._set_softness(value)
+            elif (self.softness != self.softness_default and self.controls.autopilot is not None
+                  and time.time() - self._softness_moved_at > SOFTNESS_IDLE_RESET):
+                self._set_softness(self.softness_default)
 
         def _set_softness(self, value: int) -> None:
             value = int(min(max(value, 0), 100))

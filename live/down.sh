@@ -5,7 +5,7 @@
 #   live/down.sh peel     # one task; the gateway stays
 set -u
 RSW_LIVE="${RSW_LIVE:-$HOME/rss_ws/rsw_live}"
-names=("$@"); [ $# -eq 0 ] && names=(bar phone peel towel cable)
+names=("$@"); [ $# -eq 0 ] && names=(bar peel towel cable)
 pids=()
 for name in "${names[@]}"; do
   f="$RSW_LIVE/run/$name/supervisor.pid"

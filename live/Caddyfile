@@ -41,9 +41,6 @@
 	handle /status/bar {
 		import status 8101
 	}
-	handle /status/phone {
-		import status 8102
-	}
 	handle /status/peel {
 		import status 8103
 	}
@@ -62,11 +59,6 @@
 bar.{$RSW_HOST} {
 	import site
 	reverse_proxy 127.0.0.1:8101
-}
-
-phone.{$RSW_HOST} {
-	import site
-	reverse_proxy 127.0.0.1:8102
 }
 
 peel.{$RSW_HOST} {

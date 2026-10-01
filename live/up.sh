@@ -12,7 +12,6 @@ export RSW_LIVE="${RSW_LIVE:-$HOME/rss_ws/rsw_live}"
 export RSW_HOST="${RSW_HOST:-95-133-252-186.sslip.io}"
 TASKS=(
   "bar   0 8101"
-  "phone 1 8102"
   "peel  5 8103 --render-every 1 --attract 600"
   "towel 6 8104"
   "cable 4 8105"
