@@ -248,12 +248,7 @@ def main(opts, rest) -> int:
 
         def set_readouts(self, clean: float) -> None:
             del clean  # how far the fold has come: not shown (no success on the page)
-            w = self.phone_widgets
-            now = time.time()
-            if self.map is not None and now - self._map_at >= wp.MAP_PERIOD:
-                self._map_at = now
-                w["map"].image = self.map.render()
-            w["stats"].content = self.map.caption() if self.map is not None else self.setup_text
+            pages.quiet_panel(self)  # and no readings: only the wipe keeps its force and pressure
 
     t = time.time()
     env = ts.build_env()

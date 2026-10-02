@@ -82,12 +82,22 @@ def polish(wp) -> None:
 
     def set_readouts(self, clean: float) -> None:
         del clean  # the task's completion: not shown
+        if self.scene_kind != "bar":
+            quiet_panel(self)
+            return
+        # the wipe keeps its contact map and one line: the sponge's force on the bar, and its peak pressure
         w = self.phone_widgets
         now = time.time()
         if self.map is not None and now - self._map_at >= wp.MAP_PERIOD:
             self._map_at = now
             w["map"].image = self.map.render()
-        w["stats"].content = self.map.caption() if self.map is not None else self.setup_text
+        if self.map is None:
+            w["stats"].content = self.setup_text
+            return
+        force = float(self.map.field._press_now[0])
+        self._force_shown = 0.8 * getattr(self, "_force_shown", force) + 0.2 * force
+        pressure = self.map.caption()  # "peak N kPa", or "not touching" under the field's pressure floor
+        w["stats"].content = pressure if pressure == "not touching" else f"{self._force_shown:.1f} N · {pressure}"
 
     def _on_connect(self, client) -> None:
         gui = client.gui
@@ -111,6 +121,15 @@ def polish(wp) -> None:
 
     cls._on_connect, cls.build_gui, cls.set_readouts = _on_connect, _build_gui, set_readouts
     cls._rsw_polished = True
+
+
+def quiet_panel(session) -> None:
+    """No readings on this page: the readout line and the map go once the task is running (the line
+    still carries the "Setting up..." text before that)."""
+    w = session.phone_widgets
+    for key in ("stats", "map"):
+        if key in w and w[key].visible:
+            w[key].visible = False
 
 
 def phone_opts(opts, scene: str, *, attract: float, render_every: int = 2) -> None:
