@@ -66,9 +66,12 @@ def main(argv=None) -> int:
     opts.name = opts.name or opts.task
     print(f"[live] {opts.task} on GPU {gpu}, port {opts.port}, run folder {RUN_ROOT / 'run' / opts.name}", flush=True)
 
+    import pages
     import wipe_phone as wp
 
     wp.HERE = RUN_ROOT  # its run folder is HERE/run/<name>: keep ours out of phone_demo/
+    pages.harden_websockets()
+    pages.polish(wp)
     if (HERE / f"task_{opts.task}.py").exists():
         module = importlib.import_module(f"task_{opts.task}")
         return module.main(opts, rest)

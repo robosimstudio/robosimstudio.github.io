@@ -73,7 +73,7 @@
 </head>
 <body>
 <header>
-  <div class="mark">RoboSimStudio <span>live</span></div>
+  <div class="mark">RoboSimStudio <span>Live</span></div>
   <nav id="tabs" role="tablist" aria-label="Demos"></nav>
   <div class="hint">drag the orange ball &middot; one driver at a time</div>
 </header>
@@ -124,17 +124,20 @@
   }
 
   // Which simulations answer: the gateway's status route says 204 (up) or 502 (down or restarting).
+  // Two misses in a row before a demo counts as down (one lost request on a phone is not an outage),
+  // and nothing here reloads the open demo: its page reconnects by itself when the server is back.
+  const misses = {};
   async function poll() {
     await Promise.all(DEMOS.map(async (d) => {
-      let up = false;
+      let ok = false;
       try {
-        up = (await fetch(`https://${HOST}/status/${d.id}`, { cache: "no-store" })).ok;
+        ok = (await fetch(`https://${HOST}/status/${d.id}`, { cache: "no-store" })).ok;
       } catch (e) {
-        up = false;
+        ok = false;
       }
-      if (live[d.id] === false && up && current().id === d.id) frame.dataset.src = "";  // back: reload it
-      live[d.id] = up;
-      tabs.querySelector(`[data-id="${d.id}"] .dot`).classList.toggle("live", up);
+      misses[d.id] = ok ? 0 : (misses[d.id] || 0) + 1;
+      live[d.id] = misses[d.id] < 2;
+      tabs.querySelector(`[data-id="${d.id}"] .dot`).classList.toggle("live", ok);
     }));
     show();
   }
