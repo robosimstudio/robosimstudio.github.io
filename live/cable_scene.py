@@ -32,10 +32,31 @@ cable lowered near the line down into the 8.4 mm channel between the posts.
 An end-held cable is routed the way a hose is laid: lift it so it hangs off the bench, carry it
 along the clips, lower it in. Dragged low it piles up and snags (measured: lowering past each
 clip in turn routes none of them; lifting 20 cm and lowering at the far end seats clips 1, 2, 3
-in that order). So a finger drags the hand in the vertical plane over the clips' line: across
-the screen carries it along, up the screen lifts. :class:`Cable` is the phone page's driver, the
-interface ``wipe_phone.PhoneControls`` consumes; :class:`CableTube`, :class:`CableMap` and
-:class:`HostDraw` are what the page draws and how it draws it fast.
+in that order).
+
+**A finger moves the hand in 3D** (:meth:`Cable.drag`). The orange ball moves on the world plane
+through the grab point that faces the camera most, met with the finger's ray so it stays under
+the finger: from the opening view the vertical plane along the route (up lifts, across carries,
+the hand's distance from the clips' line kept), from above the bench's plane, from the side the
+vertical plane across the route. The ball's **shadow** on the bench is a second handle: it slides
+the hand in, out and along at its height, so moving in and out needs no turn of the view. The
+plane facing the camera itself (viser's drag plane, used as is) was tried first and lost: from
+the opening view it leans back 32 deg, so up the screen is up *and in* and down is down *and out*,
+and a hand taken high over the line and lowered straight down the screen came down 10-12 cm in
+front of the clips -- 2/3 by mouse and 2/3 by touch where these planes routed 3/3 with the same
+strokes (``cable3d/AB_*``), 2 of 7 scripted visitor strokes against 5 of 7 headless
+(``cable3d/bench_visitor``). The hand is kept inside the measured reach, above the bench, over the
+clips' tips (:data:`CLIP_KEEP`) and within the cable's length of the socket.
+
+**Left alone it loops physically** (:meth:`Cable.attract`): route, rest, lift the cable out of the
+clips and lay it back where a lap starts, rest, again. No reset, so nothing snaps: four laps
+measured 3/3 after every route, 0/3 after every unroute, the cable back in the pre-roll's shape
+each time (``cable3d/bench_laps``). A fresh cable -- "New cable", or the watchdog -- is the
+pre-roll's moment restored from :class:`Snapshot` in 1-4 ms, exact to 0.000 mm.
+
+:class:`Cable` is the phone page's driver, the interface ``wipe_phone.PhoneControls`` consumes;
+:class:`CableTube`, :class:`CableMap` and :class:`HostDraw` are what the page draws and how it
+draws it fast.
 """
 
 from __future__ import annotations
@@ -79,10 +100,11 @@ cost 1.7-2x the tick (median 3.8-4.6 ms against 2.2-2.5 ms) and fixed nothing me
 # The layout, in the work-surface frame: the origin is the middle of bench_075's top (world
 # (0.6, 0, 0.75)), +x points at the visitors' camera, the Panda stands at x = -0.6. The Panda
 # reaches top-down to 0.1 mm over x -0.28..+0.14 and y -0.30..+0.30 (cable_sdx/probe2:
-# OscSetpoint + solve_into, 2 cm and 10 cm over the bench).
+# OscSetpoint + solve_into, 2 cm and 10 cm over the bench), and every corner of the hand's box
+# below at 1.4, 12 and 22 cm, holding the cable (cable3d/bench_reach).
 # ---------------------------------------------------------------------------------------------
 ROUTE_X = -0.06
-"""The clips stand on this line across the bench, and the hand works in the plane above it."""
+"""The clips stand on this line along the bench (x = ROUTE_X), and the hand starts over it."""
 CLIP_Y = (-0.10, -0.01, 0.08)
 """Clip centres along the route [m], 9 cm apart; the first 11 cm out of the socket, where the
 socket's own heading has died out of a taut cable."""
@@ -109,8 +131,9 @@ CLIP_FRICTION = 0.25
 SOCKET_HALF = (0.016, 0.012, 0.009)
 """Socket box half-extents [m]: along the cable, across it, up."""
 CLIP_COLOR = (0.13, 0.42, 0.85)
-CABLE_COLOR = (232, 232, 226)
-"""A white cable: it reads on the dark bench, and the page's orange is the ball's alone."""
+CABLE_COLOR = (38, 40, 44)
+"""A black cable: it reads on the wipe's light jigsaw mat (``backdrop``) and against the blue clips,
+and the page's orange is the ball's alone. (White read on the old dark bench.)"""
 
 # ---------------------------------------------------------------------------------------------
 # The hand
@@ -127,6 +150,19 @@ lower halves."""
 BOX_Y = (-0.12, 0.25)
 """How far along the route the tool centre may go [m]: inside the measured reach, from clip 1 to
 past the far end (further toward the socket a phone held upright loses the hand off its edge)."""
+BOX_X = (ROUTE_X - 0.12, ROUTE_X + 0.12)
+"""How far across the route the tool centre may go [m]: 12 cm inward (toward the robot, behind the
+clips) and 12 cm outward (toward the visitors' camera, in front of them)."""
+CLIP_CLEAR = 0.05
+"""Lowest tool centre over a clip [m]: the fingertips (9.3 mm below it) pass over the prongs' tips."""
+CLIP_KEEP = (0.032, 0.014)
+"""Half-extents [m] (across the route, along it) of the zone over each clip where lower than
+:data:`CLIP_CLEAR` the closed fingers (about +-14 x +-9 mm) would land on its prongs (+-17 x +-3 mm
+at the horns' tips). Swept low across the clips' line, the hand otherwise ran into clip 3 and stuck
+there 248 mm short of its target (``cable3d/bench_reach``)."""
+CLIP_RAMP = 0.03
+"""The floor rises to :data:`CLIP_CLEAR` over this distance [m] outside that zone, so a hand dragged
+low across a clip rides up and over it rather than popping up."""
 REACH_FROM_SOCKET = CABLE_LENGTH
 """How far the tool centre may get from the socket [m]: the cable's length, so a hand pulled past
 it slides over a sphere instead, with the cable taut. Taut matters: a bow of amplitude A costs
@@ -140,16 +176,12 @@ route plane, the rest of the cable still lying in front of the clips."""
 
 AUTO_HIGH = 0.20
 """The autopilot's lift [m]: high enough that most of the cable hangs off the bench."""
-AUTO_KEYS = (
-    ((START[1], AUTO_HIGH), 1.4),
-    ((BOX_Y[1], AUTO_HIGH), 1.0),
-    ((BOX_Y[1], AUTO_HIGH), 0.5),
-    ((BOX_Y[1], 0.07), 2.4),
-    ((BOX_Y[1], LAY_Z), 1.2),
-    ((BOX_Y[1], LAY_Z), 2.5),
-)
-"""The autopilot: lift, carry to the far end (the reach clamp stops it where the cable goes taut),
-lower into the clips along that sphere, rest. ((y, z), seconds), eased."""
+AUTO_OUT = ROUTE_X + 0.11
+"""Where the autopilot lays the cable back down [m, x]: 11 cm in front of the clips' line."""
+HOLD_ROUTED, HOLD_START = 3.0, 2.0
+"""Seconds the autopilot rests with the cable routed, and back where a lap starts."""
+VIEW_ELEV = math.atan2(0.48, 0.78)
+"""The opening view looks down on the route at this angle (32 deg) from the bench's open side."""
 
 
 def surface_frame(sim) -> np.ndarray:
@@ -536,9 +568,12 @@ def routed_count(q: np.ndarray, origin: np.ndarray, route) -> tuple[int, list[bo
     """How many clips hold the cable, counted in order from the socket; and which ones do.
 
     A clip holds the cable when a cable segment crosses the clip's channel plane between the prongs
-    (within the channel's half-width plus 2 mm of the line) and below 12 mm. The count takes
-    the clips in route order and stops at the first that does not hold it, or that the cable
-    crosses no further along than the clip before."""
+    (within the channel's half-width plus 2 mm of the line) and below 12 mm. The count takes the
+    clips in route order and counts each that holds the cable further along it than the last one
+    counted: a cable doubling back through a clip is not routed there. A clip that does not hold it
+    is passed over, not the end of the count -- laid in from the side, a cable can sit in clips 2
+    and 3 and miss 1, and the page's map then shows two clips holding it (``cable3d/bench_side``,
+    "behind_then_out": the first rule read that 0/3)."""
     loc = q - origin
     held: list[float | None] = []
     for clip in route:
@@ -555,9 +590,8 @@ def routed_count(q: np.ndarray, origin: np.ndarray, route) -> tuple[int, list[bo
         held.append(hit)
     count, last = 0, -1.0
     for hit in held:
-        if hit is None or hit <= last:
-            break
-        count, last = count + 1, hit
+        if hit is not None and hit > last:
+            count, last = count + 1, hit
     return count, [h is not None for h in held]
 
 
@@ -632,18 +666,36 @@ class Cable:
         self.hz = float(sim.request.physics.control_hz)
         self.origin = surface_frame(sim)
         self.surface_z = float(sim.handles.surface_z)
-        pos, quat = self.ik.ee_pose(sim.state)
         self.quat = grip_quat(sim)
         self.law = OscSetpoint(control_dt=1.0 / self.hz)
-        self.law.reset(pos, quat)
         self.ball = np.array([BALL_TOWARD, 0.0, BALL_UP])
         exit_p, _d = socket_exit()
         self.socket = self.origin + exit_p
-        self.cursor = self.clamp(np.asarray(pos, dtype=np.float64)) + self.ball
-        """The orange ball. The hand goes to ``cursor - ball``."""
         self.idx = np.asarray(sim["cable"].particles, dtype=np.int64)
         self.clips = clips()
         self.reset_request = False
+        self.on_new = None
+        """``(why) -> None``: what "New cable" calls (the page's instant fresh cable). Without one,
+        :meth:`new_stripe` asks the page for a full restart through :attr:`reset_request`."""
+        self.grab: tuple[np.ndarray, np.ndarray, np.ndarray] | None = None
+        """(eye, look-at, grab point) of the drag in progress: where the finger's ray comes from."""
+        self.grab_kind = "ball"
+        """What the finger took: ``ball`` (moves the hand on the world plane facing the camera) or
+        ``shadow`` (the ball's shadow on the bench: slides the hand over the bench)."""
+        self.on_lap = None
+        """``(what, routed) -> None``, told at the end of each autopilot rest: ``"routed"`` or
+        ``"unrouted"`` and how many clips hold the cable then."""
+        self.reseed()
+
+    def reseed(self) -> None:
+        """Start over from wherever the hand is now: after the pre-roll, and after a restore."""
+        pos, quat = self.ik.ee_pose(self.sim.state)
+        self.law.reset(pos, quat)
+        self.cursor = self.clamp(np.asarray(pos, dtype=np.float64)) + self.ball
+        """The orange ball. The hand goes to ``cursor - ball``."""
+        self.reset_request = False
+        self.grab = None
+        self.grab_kind = "ball"
         self.routed = 0
         self.held_by: list[bool] = [False] * len(self.clips)
 
@@ -655,24 +707,38 @@ class Cable:
         return np.asarray(p, dtype=np.float64) - self.origin
 
     def clamp(self, hand: np.ndarray) -> np.ndarray:
-        """A tool-centre target, kept in the plane over the clips, inside the reach, and within the
-        cable's length of the socket."""
+        """A tool-centre target kept inside the box over the clips (the measured reach, above the
+        bench, 12 cm either side of the clips' line) and within the cable's length of the socket."""
         loc = self.local(hand)
-        loc[0] = ROUTE_X
+        loc[0] = float(np.clip(loc[0], *BOX_X))
         loc[1] = float(np.clip(loc[1], *BOX_Y))
-        loc[2] = float(np.clip(loc[2], LAY_Z, Z_MAX))
+        loc[2] = float(np.clip(loc[2], self.floor_at(loc[0], loc[1]), Z_MAX))
         sock = self.local(self.socket)
-        r = float(np.linalg.norm(loc - sock))
-        if r > REACH_FROM_SOCKET:
-            # Shorten along the route, keeping the height: a taut cable stops the hand going further.
-            dz = loc[2] - sock[2]
-            span = math.sqrt(max(REACH_FROM_SOCKET**2 - dz * dz, 0.0))
-            loc[1] = sock[1] + span
+        d = loc - sock
+        if float(np.linalg.norm(d)) > REACH_FROM_SOCKET:
+            # Pulled past the cable's length: slide in toward the socket over the bench, keeping the
+            # height -- a taut cable stops the hand going further out.
+            span = math.sqrt(max(REACH_FROM_SOCKET**2 - d[2] * d[2], 0.0))
+            flat = float(np.hypot(d[0], d[1]))
+            if flat > 1e-9:
+                loc[:2] = sock[:2] + d[:2] * (span / flat)
+            loc[2] = max(loc[2], self.floor_at(loc[0], loc[1]))
         return self.world(loc)
 
-    def ball_at(self, y: float, z: float) -> np.ndarray:
-        """The ball for a tool centre at route position ``y`` and height ``z`` over the bench."""
-        return self.clamp(self.world((ROUTE_X, y, z))) + self.ball
+    def floor_at(self, x: float, y: float) -> float:
+        """The lowest tool centre at (``x``, ``y``) [m over the bench]: :data:`LAY_Z`, rising to
+        :data:`CLIP_CLEAR` over each clip (:data:`CLIP_KEEP`, :data:`CLIP_RAMP`)."""
+        rise = 0.0
+        for clip in self.clips:
+            dx = max(abs(x - float(clip.center[0])) - CLIP_KEEP[0], 0.0)
+            dy = max(abs(y - float(clip.center[1])) - CLIP_KEEP[1], 0.0)
+            u = 1.0 - min(math.hypot(dx, dy) / CLIP_RAMP, 1.0)
+            rise = max(rise, u * u * (3.0 - 2.0 * u))
+        return LAY_Z + (CLIP_CLEAR - LAY_Z) * rise
+
+    def ball_at(self, x: float, y: float, z: float) -> np.ndarray:
+        """The ball for a tool centre at (``x``, ``y``, ``z``) in the work-surface frame."""
+        return self.clamp(self.world((x, y, z))) + self.ball
 
     def particles(self) -> np.ndarray:
         return self.sim.state.particle_q.numpy()[self.idx].astype(np.float64)
@@ -682,14 +748,50 @@ class Cable:
         return self.cursor.copy()
 
     def drag(self, cursor0, delta, up, right, away) -> np.ndarray:
-        """Across the screen carries the hand along the clips, up the screen lifts (world z, whatever
-        the camera's elevation, as the bar page's press does)."""
-        del away
-        hand = cursor0 - self.ball + (delta @ right) * right + (delta @ up) * np.array([0.0, 0.0, 1.0])
-        return self.clamp(hand) + self.ball
+        """The hand follows the finger in 3D. The page passes ``delta`` on viser's drag plane (the
+        plane facing the camera through the grab point); the finger's ray through it is met with a
+        world plane through the grab point instead -- the bench's for the shadow, and for the ball
+        the world-axis plane that faces the camera most (see the module docstring for why not the
+        drag plane itself) -- so what was grabbed stays under the finger. Turning the view turns
+        the ball's plane. Clamped to :meth:`clamp`'s box."""
+        del up, right, away
+        if self.grab is None:  # no camera known: the drag plane itself
+            move = np.asarray(delta, dtype=np.float64)
+        elif self.grab_kind == "shadow":
+            move = self._axis_move(delta, np.array([0.0, 0.0, 1.0]))
+        else:
+            move = self._axis_move(delta)
+        return self.clamp(cursor0 - self.ball + move) + self.ball
+
+    def _axis_move(self, delta, normal=None) -> np.ndarray:
+        """The pointer's ray met with a world-axis plane through the grab point -- ``normal``'s, or
+        the one that faces the camera most: from the front a vertical plane along the route, from
+        the side one across it, from above the bench's own plane."""
+        eye, _look, origin = self.grab
+        sight = origin - eye
+        if normal is not None:
+            n = np.asarray(normal, dtype=np.float64)
+        else:
+            n = np.zeros(3)
+            n[int(np.argmax(np.abs(sight)))] = 1.0
+        ray = origin + np.asarray(delta, dtype=np.float64) - eye
+        den = float(n @ ray)
+        if abs(den) < 1e-6:
+            return np.zeros(3)
+        t = float(n @ (origin - eye)) / den
+        if t <= 0.0:
+            return np.zeros(3)
+        move = eye + t * ray - origin
+        dist = float(np.linalg.norm(move))
+        return move if dist < 1.0 else move / dist  # a ray grazing the plane: no flight to infinity
 
     def release(self) -> np.ndarray:
+        self.grab, self.grab_kind = None, "ball"
         return self.cursor  # the hand holds the cable where the finger left it
+
+    def shadow_point(self, ball: np.ndarray) -> np.ndarray:
+        """Where the ball's shadow lies: straight under it, on the bench."""
+        return np.array([float(ball[0]), float(ball[1]), self.surface_z + 0.0015])
 
     def idle_cursor(self) -> np.ndarray:
         return self.cursor
@@ -698,7 +800,16 @@ class Cable:
     def drive(self) -> None:
         state = self.sim.state
         pos, quat = self.ik.ee_pose(state)
-        self.ik.set_target(*self.law.advance(pos, quat, self.clamp(self.cursor - self.ball), self.quat))
+        set_pos, set_quat = self.law.advance(pos, quat, self.clamp(self.cursor - self.ball), self.quat)
+        # The way there keeps over the clips too, not only the target: a target that jumps across
+        # one (a quick flick) would otherwise draw the hand straight through it at bench height.
+        loc = self.local(set_pos)
+        floor = self.floor_at(float(loc[0]), float(loc[1]))
+        if loc[2] < floor:
+            loc[2] = floor
+            set_pos = self.world(loc)
+            self.law.reset(set_pos, set_quat)
+        self.ik.set_target(set_pos, set_quat)
         self.ik.solve_into(state.joint_q, self.sim.control.joint_target_q)
 
     def tcp(self) -> np.ndarray:
@@ -709,28 +820,88 @@ class Cable:
 
     def field(self) -> dict:
         if self.reset_request:
-            # A fresh cable is on its way: the page would otherwise cheer the autopilot's route
-            # in the second before its reset ("Routed! Tap New cable to go again").
+            # A fresh cable is on its way: the page would otherwise cheer a route in the second
+            # before its reset ("Routed! Tap New cable to go again").
             return {"cleared_fraction": 0.0}
         self.routed, self.held_by = routed_count(self.particles(), self.origin, self.clips)
         return {"cleared_fraction": self.routed / float(len(self.clips))}
 
     def new_stripe(self) -> None:
-        """Called for "New cable", and when the autopilot's run ends: a fresh cable is a new episode."""
-        self.reset_request = True
+        """For "New cable": a fresh cable, from the page's snapshot when it has one."""
+        if self.on_new is not None:
+            self.on_new("New cable.")
+        else:
+            self.reset_request = True
 
+    # -- the autopilot
     def attract(self):
-        """The autopilot: lift the cable off the bench, carry it to the far end of the clips,
-        lower it in. A generator of ball positions, one per control step."""
-        cur = self.local(self.cursor - self.ball)[1:]
-        for (y, z), sec in AUTO_KEYS:
-            nxt = np.array([y, z], dtype=np.float64)
+        """The autopilot, for as long as nobody drives: route the cable, rest, take it out of the
+        clips and lay it back where a lap starts, rest, and again -- every move physical, no reset.
+        A generator of ball positions, one per control step, that never ends."""
+        hand = self.local(self.cursor - self.ball)
+        start = np.asarray(START, dtype=np.float64)
+        if self.routed > 0 or float(np.linalg.norm(hand - start)) > 0.03:
+            hand = yield from self._unroute(hand)  # a visitor left it somewhere: tidy up first
+            hand = yield from self._hold(hand, HOLD_START)
+        while True:
+            hand = yield from self._route(hand)
+            hand = yield from self._hold(hand, HOLD_ROUTED)
+            if self.on_lap is not None:
+                self.on_lap("routed", self.routed)
+            hand = yield from self._unroute(hand)
+            hand = yield from self._hold(hand, HOLD_START)
+            if self.on_lap is not None:
+                self.on_lap("unrouted", self.routed)
+
+    def _glide(self, keys, hand):
+        """Ease the tool centre through ``keys`` ((x, y, z), seconds), each leg from the last. The
+        legs run between the keys as given and every point is clamped on the way, so a leg aimed
+        past the cable's length rides the sphere with the cable taut. Returns where it ended."""
+        cur = np.asarray(hand, dtype=np.float64)
+        for key, sec in keys:
+            nxt = np.asarray(key, dtype=np.float64)
             n = max(2, int(sec * self.hz))
             for u in np.linspace(0.0, 1.0, n):
                 s = u * u * (3.0 - 2.0 * u)
-                yz = cur + (nxt - cur) * s
-                yield self.ball_at(float(yz[0]), float(yz[1]))
+                p = cur + (nxt - cur) * s
+                yield self.ball_at(float(p[0]), float(p[1]), float(p[2]))
             cur = nxt
+        return self.local(self.clamp(self.world(cur)))
+
+    def _hold(self, hand, sec: float):
+        ball = self.ball_at(*[float(v) for v in hand])
+        for _ in range(max(1, int(sec * self.hz))):
+            yield ball
+        return hand
+
+    def _route(self, hand):
+        """Lift the cable off the bench, carry it to the far end (the reach clamp stops it where the
+        cable goes taut), lower it into the clips along that sphere.
+
+        Straight up and down over the line: lowered from behind it, along the opening view's drag
+        plane, the cable kept the socket's heading at clip 1 and lay outside it every lap (2/3,
+        ``cable3d/bench_laps_plane``); lowered straight down, 3/3 every lap."""
+        far = BOX_Y[1]
+        keys = (
+            ((ROUTE_X, float(hand[1]), AUTO_HIGH), 1.4),
+            ((ROUTE_X, far, AUTO_HIGH), 1.0),
+            ((ROUTE_X, far, AUTO_HIGH), 0.5),
+            ((ROUTE_X, far, 0.07), 2.4),
+            ((ROUTE_X, far, LAY_Z), 1.2),
+        )
+        return (yield from self._glide(keys, hand))
+
+    def _unroute(self, hand):
+        """Lift the cable straight up out of the clips, swing it out in front of them, lay it down
+        there and bring the end back to :data:`START`: where the pre-roll leaves a fresh cable."""
+        far = BOX_Y[1]
+        keys = (
+            ((float(hand[0]), float(hand[1]), AUTO_HIGH), 1.6),
+            ((AUTO_OUT, far, AUTO_HIGH), 1.4),
+            ((AUTO_OUT, far, 0.025), 2.0),
+            (START, 1.6),
+        )
+        return (yield from self._glide(keys, hand))
 
     def broken_state(self) -> bool:
         q = self.particles()
@@ -739,6 +910,94 @@ class Cable:
         if float(q[:, 2].min()) < self.surface_z - 0.02:
             return True  # through the bench
         return bool(self.holds.held) and float(np.linalg.norm(q[-1] - self.tcp())) > 0.05
+
+
+class Snapshot:
+    """The moment the pre-roll ends -- a fresh cable straight out of the socket, its end in the hand
+    at :data:`START` -- kept to come back to. "New cable" and the watchdog restore it in a few
+    milliseconds instead of resetting and replaying the pick (~2.3 s of a page with no ball, an arm
+    snapped home and the robot reaching down again).
+
+    Newton's half is every state and control array, as ``towel_scene.Rig`` keeps a towel. SuperDex's
+    half is the engine's own captured state (what the bridge's reset restores, but taken here, with
+    the cable already in the hand). The engine restores a state only onto the composition it was
+    captured with, so the pins stay put across a restore -- never unpinned and pinned again -- and a
+    full restart (new pins) needs a new snapshot: :meth:`valid` says which.
+    """
+
+    STATE = ("particle_q", "particle_qd", "joint_q", "joint_qd", "body_q", "body_qd")
+    CONTROL = ("joint_target_q", "joint_target_qd", "joint_f", "joint_act")
+
+    def __init__(self, sim, holds: Holds) -> None:
+        self.sim, self.holds = sim, holds
+        p = sim.pipeline
+        self.states = [
+            {f: getattr(st, f).numpy().copy() for f in self.STATE if getattr(st, f, None) is not None}
+            for st in (p.state_0, p.state_1)
+        ]
+        self.control = {
+            f: getattr(p.control, f).numpy().copy() for f in self.CONTROL if getattr(p.control, f, None) is not None
+        }
+        bridge = holds.bridge
+        self.engine = [scene.capture_state() for scene in bridge.scenes]
+        self.pins = dict(holds.pins)
+        self.fixed = {n: v.copy() for n, v in holds.fixed.items()}
+        self.held = {n: v.copy() for n, v in holds.held.items()}
+        self.goal = {n: v.copy() for n, v in holds.goal.items()}
+        self.restores = 0
+
+    def valid(self) -> bool:
+        """The pins are the ones it was captured with (a full restart makes new ones)."""
+        return self.holds.pins == self.pins and bool(self.held)
+
+    def restore(self) -> None:
+        holds, p = self.holds, self.sim.pipeline
+        bridge = holds.bridge
+        # MuJoCo's warm start and applied forces, not the host engine's: its reset is a return to
+        # the build-time rest that also takes every pin away.
+        newton_solver = getattr(p.program.solver, "newton_solver", None)
+        if newton_solver is not None:
+            try:
+                newton_solver.reset(p.state_0, flags=0)
+            except TypeError:
+                newton_solver.reset(p.state_0)
+        for st, saved in zip((p.state_0, p.state_1), self.states, strict=True):
+            for f, a in saved.items():
+                getattr(st, f).assign(a)
+        for f, a in self.control.items():
+            getattr(p.control, f).assign(a)
+        # The engine, as the bridge's own restore does it: the state, a zero-length step so its
+        # queries read the restored nodes, the write-back's previous positions, a teleport for the
+        # mirrors (no sweep from wherever the hand was), the divergence flags and the wrench feed.
+        for scene, saved in zip(bridge.scenes, self.engine, strict=True):
+            scene.restore_state(saved, release_immediately=False)
+            scene.step(0.0)
+        for entry in bridge.actors:
+            entry["prev"] = np.ascontiguousarray(np.asarray(entry["read"]()).reshape(-1, 3), dtype=entry["prev"].dtype)
+        bridge.rig.mark_teleport()
+        bridge._diverged_logged.clear()
+        bridge._diverged_worlds = [False] * bridge.num_worlds
+        if bridge.feedback_enabled and bridge.apply_wrenches is not None:
+            bridge.apply_wrenches(bridge._acc.zero())
+        holds.fixed = {n: v.copy() for n, v in self.fixed.items()}
+        holds.held = {n: v.copy() for n, v in self.held.items()}
+        holds.goal = {n: v.copy() for n, v in self.goal.items()}
+        q = holds.nodes_world()
+        bridge.set_pin_targets(self.pins["fixed"], np.asarray([self.fixed[n] for n in sorted(self.fixed)]))
+        bridge.set_pin_targets(self.pins["held"], np.asarray([q[n] for n in sorted(self.held)]))
+        if hasattr(p, "reset_finite_flags"):
+            p.reset_finite_flags()
+        p.mark_dirty()
+        self.restores += 1
+
+    def release(self) -> None:
+        """Give the engine its captured states back (a snapshot that will not be used again)."""
+        for scene, saved in zip(self.holds.bridge.scenes, self.engine, strict=False):
+            try:
+                scene.release_state(saved)
+            except Exception:
+                pass
+        self.engine = []
 
 
 # ---------------------------------------------------------------------------------------------
@@ -859,9 +1118,13 @@ def _plug_wxyz(u: np.ndarray) -> tuple[float, float, float, float]:
 class CableMap:
     """The route from above, as the opening camera sees it (the socket on the left, the far side up):
     the clips, the cable coloured by height (grey on the bench, orange lifted), the clips that hold
-    it in green. A short strip, so the phone's sheet stays short. It is the page's contact map."""
+    it in green, the hand as a ring. It is the page's contact map, and it is where a visitor reads
+    how far in or out the hand is. It spans the hand's whole reach across the route at half the
+    scale along it, so it stays a ~4:1 strip and the phone's sheet stays short."""
 
     PX_PER_M = 900.0
+    DEPTH = 0.5
+    """Scale across the route (in and out), relative to along it."""
     BG = (22, 22, 26)
     BENCH = (52, 54, 60)
     LOW = np.array([150, 160, 172], dtype=np.float32)
@@ -870,13 +1133,15 @@ class CableMap:
     def __init__(self, cable: Cable) -> None:
         self.cable = cable
         self.y0, self.y1 = SOCKET_Y - 0.045, BOX_Y[1] + 0.03
-        self.x0, self.x1 = ROUTE_X - 0.03, ROUTE_X + 0.10  # a ~4:1 strip: the phone's sheet stays short
+        self.x0, self.x1 = BOX_X[0] - 0.015, BOX_X[1] + 0.015
         self.w = int(round((self.y1 - self.y0) * self.PX_PER_M))
-        self.h = max(48, int(round((self.x1 - self.x0) * self.PX_PER_M)))
+        self.h = max(48, int(round((self.x1 - self.x0) * self.PX_PER_M * self.DEPTH)))
         self.top = 0.0
 
     def _px(self, x, y):
-        return (np.asarray(y) - self.y0) * self.PX_PER_M, (np.asarray(x) - self.x0) * self.PX_PER_M
+        """Image (column, row) of work-surface (x, y): along the route to the right, toward the
+        camera down."""
+        return (np.asarray(y) - self.y0) * self.PX_PER_M, (np.asarray(x) - self.x0) * self.PX_PER_M * self.DEPTH
 
     def caption(self) -> str:
         return f"cable {100 * self.top:.0f} cm up" if self.top > 0.015 else "cable on the bench"
@@ -890,13 +1155,13 @@ class CableMap:
         lx, ly = self._px([ROUTE_X, ROUTE_X], [self.y0, self.y1])
         draw.line([(lx[0], ly[0]), (lx[1], ly[1])], fill=(60, 64, 72), width=1)
         sx, sy = self._px(ROUTE_X, SOCKET_Y - 0.016)
-        draw.rectangle([sx - 14, sy - 11, sx + 14, sy + 11], fill=(90, 92, 98))
+        draw.rectangle([sx - 14, sy - 6, sx + 14, sy + 6], fill=(90, 92, 98))
         for clip, held in zip(c.clips, c.held_by, strict=False):
             col = (40, 200, 110) if held else (60, 120, 230)
             for s in (1.0, -1.0):
                 p = clip.center + clip.across * s * (CHANNEL_HALF + PRONG_R)
                 px, py = self._px(p[0], p[1])
-                draw.ellipse([px - 4, py - 4, px + 4, py + 4], fill=col)
+                draw.ellipse([px - 3.5, py - 3.5, px + 3.5, py + 3.5], fill=col)
         q = c.local(c.particles())
         z = q[:, 2]
         self.top = float(max(0.0, z.max() - CABLE_RADIUS))
@@ -1011,14 +1276,19 @@ class HostDraw:
 
 def view(aspect: float = 0.46) -> tuple[tuple[float, ...], tuple[float, ...]]:
     """(look-at, eye offset), world metres, for a screen ``aspect`` (width / height) wide: from the
-    bench's open side (+x), aimed a little below the route so it sits above a phone's sheet. A phone
-    held upright needs the whole route across its narrow width (~0.5 m at 0.9 m); a landscape
-    screen sees twice as wide, so its eye comes closer."""
-    look = np.array([0.6 + ROUTE_X + 0.03, 0.02, 0.75 + 0.03])
-    offset = np.array([0.78, 0.0, 0.48])
+    bench's open side (+x) at :data:`VIEW_ELEV`, aimed a little below the route so it sits above a
+    phone's sheet. A phone held upright needs the whole route across its narrow width (~0.5 m at
+    0.9 m); a landscape screen sees twice as wide, so its eye comes closer.
+
+    Framed for the hand's whole box, not only the route (``cable3d/frame_eval.py``: the ball at each
+    corner and its shadow, projected through a 390 x 664 phone and a 1280 x 800 desktop): the look
+    point sits 2-4 cm toward the far end, where the hand works, and on a desktop 2 cm higher and 6 %
+    further back, so the ball lifted at the far end clears the floating panel at the top right."""
+    look = np.array([0.6 + ROUTE_X + 0.03, 0.04, 0.75 + 0.03])
+    offset = 0.916 * np.array([math.cos(VIEW_ELEV), 0.0, math.sin(VIEW_ELEV)])
     if aspect > 1.0:
-        look = look + np.array([0.0, 0.0, 0.03])
-        offset = offset * 0.62
+        look = look + np.array([0.0, 0.02, 0.05])
+        offset = offset * 0.66
     return tuple(look.tolist()), tuple(offset.tolist())
 
 
@@ -1028,6 +1298,7 @@ __all__ = [
     "CableTube",
     "Holds",
     "HostDraw",
+    "Snapshot",
     "build_env",
     "build_scene",
     "clips",
