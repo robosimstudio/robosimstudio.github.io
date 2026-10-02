@@ -1117,8 +1117,8 @@ def _plug_wxyz(u: np.ndarray) -> tuple[float, float, float, float]:
 
 class CableMap:
     """The route from above, as the opening camera sees it (the socket on the left, the far side up):
-    the clips, the cable coloured by height (grey on the bench, orange lifted), the clips that hold
-    it in green, the hand as a ring. It is the page's contact map, and it is where a visitor reads
+    the clips, the cable coloured by height (grey on the bench, orange lifted), the hand as a
+    ring. It is the page's contact map, and it is where a visitor reads
     how far in or out the hand is. It spans the hand's whole reach across the route at half the
     scale along it, so it stays a ~4:1 strip and the phone's sheet stays short."""
 
@@ -1156,8 +1156,8 @@ class CableMap:
         draw.line([(lx[0], ly[0]), (lx[1], ly[1])], fill=(60, 64, 72), width=1)
         sx, sy = self._px(ROUTE_X, SOCKET_Y - 0.016)
         draw.rectangle([sx - 14, sy - 6, sx + 14, sy + 6], fill=(90, 92, 98))
-        for clip, held in zip(c.clips, c.held_by, strict=False):
-            col = (40, 200, 110) if held else (60, 120, 230)
+        col = (60, 120, 230)  # the clips' own blue: the map does not judge the route
+        for clip in c.clips:
             for s in (1.0, -1.0):
                 p = clip.center + clip.across * s * (CHANNEL_HALF + PRONG_R)
                 px, py = self._px(p[0], p[1])

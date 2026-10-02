@@ -44,7 +44,6 @@
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wait); flex: none; }
   .dot.live { background: var(--live); }
   .short { display: none; }
-  .hint { color: var(--muted); font-size: 13px; white-space: nowrap; }
   main { flex: 1; position: relative; min-height: 0; }
   iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--stage); }
   .note {
@@ -54,7 +53,6 @@
   .note.on { display: grid; }
   @media (max-width: 760px) {
     header { gap: 8px; padding-left: 10px; padding-right: 10px; }
-    .hint { display: none; }
     .long { display: none; }
     .short { display: inline; }
     nav button { padding: 6px 10px; }
@@ -75,7 +73,6 @@
 <header>
   <div class="mark">RoboSimStudio <span>Live</span></div>
   <nav id="tabs" role="tablist" aria-label="Demos"></nav>
-  <div class="hint">drag the orange ball &middot; one driver at a time</div>
 </header>
 <main>
   <iframe id="demo" title="Live simulation" allow="fullscreen; clipboard-write"></iframe>

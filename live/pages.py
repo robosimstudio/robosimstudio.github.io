@@ -69,12 +69,25 @@ def harden_websockets() -> None:
 
 def polish(wp) -> None:
     """The phone page as the website shows it: the per-visitor path-traced view is called
-    "Render Mode (Slow)", and viser's settings menu is gone. Patches ``wipe_phone.PhoneSession``
-    in this process (never the file); call before the session is built."""
+    "Render Mode (Slow)", viser's settings menu is gone, and nothing on the page checks or announces
+    success or shows the simulation's speed -- no progress bar, no "Clean!"/"Peeled!" toasts, a
+    readout line that is only the physical reading (contact pressure, bond load, ...). Patches
+    ``wipe_phone`` in this process (never the file); call before the session is built."""
     cls = wp.PhoneSession
     if getattr(cls, "_rsw_polished", False):
         return
     on_connect, build_gui = cls._on_connect, cls.build_gui
+    # PhoneControls cheers once the field is 95 % done unless it already has: make that always so.
+    wp.PhoneControls._celebrated = property(lambda self: True, lambda self, value: None)
+
+    def set_readouts(self, clean: float) -> None:
+        del clean  # the task's completion: not shown
+        w = self.phone_widgets
+        now = time.time()
+        if self.map is not None and now - self._map_at >= wp.MAP_PERIOD:
+            self._map_at = now
+            w["map"].image = self.map.render()
+        w["stats"].content = self.map.caption() if self.map is not None else self.setup_text
 
     def _on_connect(self, client) -> None:
         gui = client.gui
@@ -93,9 +106,11 @@ def polish(wp) -> None:
 
     def _build_gui(self) -> None:
         build_gui(self)
+        self.phone_widgets["progress"].visible = False  # completion is not shown
         self.server.gui.add_html(HIDE_VISER_MENU, order=1000)
 
-    cls._on_connect, cls.build_gui, cls._rsw_polished = _on_connect, _build_gui, True
+    cls._on_connect, cls.build_gui, cls.set_readouts = _on_connect, _build_gui, set_readouts
+    cls._rsw_polished = True
 
 
 def phone_opts(opts, scene: str, *, attract: float, render_every: int = 2) -> None:

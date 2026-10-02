@@ -257,7 +257,6 @@ def main(opts, rest) -> int:
                 return
             controls = self.controls
             controls.autopilot = None  # its generator was walking the old cable
-            controls._celebrated = False
             if controls.dragging:  # a finger mid-drag would pull the hand back to the old cable
                 controls.dragging, controls.anchor = False, None
                 controls.released_at = time.time()
@@ -307,17 +306,13 @@ def main(opts, rest) -> int:
             self.fresh_cable(why)
 
         def set_readouts(self, clean: float) -> None:
+            del clean  # how many clips hold the cable: not shown (no success on the page)
             w = self.phone_widgets
-            w["progress"].value = round(100.0 * clean, 1)
-            if clean < 0.95 and self.controls is not None:
-                self.controls._celebrated = False  # taken out again: the next route is cheered too
             now = time.time()
             if self.map is not None and now - self._map_at >= wp.MAP_PERIOD:
                 self._map_at = now
                 w["map"].image = self.map.render()
-            routed = self.wipe.routed if self.wipe is not None else 0
-            where = self.map.caption() if self.map is not None else "setting up"
-            w["stats"].content = f"**{routed}/3** clips · {where} · sim {self._rate / 60:.2f}×"
+            w["stats"].content = self.map.caption() if self.map is not None else self.setup_text
 
         def draw(self) -> None:
             super().draw()

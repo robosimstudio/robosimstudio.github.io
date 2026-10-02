@@ -247,14 +247,13 @@ def main(opts, rest) -> int:
                     )
 
         def set_readouts(self, clean: float) -> None:
+            del clean  # how far the fold has come: not shown (no success on the page)
             w = self.phone_widgets
-            w["progress"].value = round(100.0 * clean, 1)
             now = time.time()
             if self.map is not None and now - self._map_at >= wp.MAP_PERIOD:
                 self._map_at = now
                 w["map"].image = self.map.render()
-            touch = self.map.caption() if self.map is not None else "setting up"
-            w["stats"].content = f"**{100 * clean:.0f} %** folded · {touch} · sim {self._rate / 60:.2f}×"
+            w["stats"].content = self.map.caption() if self.map is not None else self.setup_text
 
     t = time.time()
     env = ts.build_env()
