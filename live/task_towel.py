@@ -3,7 +3,8 @@
 The task's own ``FoldRoutine`` takes the towel's edge once, at start-up; the rig then narrows
 the grip to the fingers, lifts the support hand off and captures that moment. From there the
 carrying hand is the visitors', "New towel" (and the watchdog) restore the captured moment in
-milliseconds, and a shared **Softness** slider sets how limp the towel is.
+milliseconds, and a shared **Softness** slider sets how limp the towel is. The page stands in the
+wipe's room (``backdrop.py``: the bar's jigsaw mat, slat wall and lab, turned to face this camera).
 """
 
 from __future__ import annotations
@@ -13,6 +14,7 @@ import time
 
 import numpy as np
 
+import backdrop
 import pages
 import towel_scene as ts
 
@@ -256,6 +258,7 @@ def main(opts, rest) -> int:
 
     t = time.time()
     env = ts.build_env()
+    print(f"[phone] {backdrop.dress(env, 'towel')}", flush=True)
     # Until the hand has the edge, look at the towel lying there from the bench's open side (+x;
     # ``towel_scene.view`` takes over once the carry's axes are known).
     q = env.state.particle_q.numpy()
