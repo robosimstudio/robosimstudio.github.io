@@ -25,6 +25,9 @@ HIDE_VISER_MENU = (
 """viser's own settings menu (the sliders icon in the panel's handle): no theme switch hides it, but
 the panel renders raw HTML, so a style rule does."""
 
+PANEL_WIDTH = "medium"
+"""viser's floating panel width on a desktop (the phone page asks for "small")."""
+
 PING_TIMEOUT = 60.0
 """Seconds a viewer may take to answer the server's keepalive ping (the websockets default is 20)."""
 
@@ -116,6 +119,17 @@ def polish(wp) -> None:
 
     def _build_gui(self) -> None:
         build_gui(self)
+        # The phone page's "small" floating panel is too narrow on a desktop for its button row: the
+        # unlabelled row keeps viser's label column, and "Reset view" ran 31 px past the panel's edge.
+        # (A phone shows the panel as a full-width sheet: unaffected.)
+        self.server.gui.configure_theme(
+            control_layout="floating",
+            control_width=PANEL_WIDTH,
+            dark_mode=False,
+            show_logo=False,
+            show_share_button=False,
+            brand_color=wp.BRAND,
+        )
         self.phone_widgets["progress"].visible = False  # completion is not shown
         self.server.gui.add_html(HIDE_VISER_MENU, order=1000)
 

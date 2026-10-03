@@ -9,7 +9,7 @@ RSW_LIVE="${RSW_LIVE:-$HOME/rss_ws/rsw_live}"
 since="${SINCE:-$(date +%s)}"; limit="${WAIT_LIMIT:-420}"; rc=0
 for name in "$@"; do
   log="$RSW_LIVE/run/$name/serve.log"; t=0
-  until { [ -f "$log" ] && [ "$(stat -c %Y "$log")" -ge "$since" ] && grep -q "the hand is the phones' now" "$log"; } || [ "$t" -ge "$limit" ]; do
+  until { [ "$(stat -c %Y "$log" 2>/dev/null || echo 0)" -ge "$since" ] && grep -q "the hand is the phones' now" "$log" 2>/dev/null; } || [ "$t" -ge "$limit" ]; do
     sleep 3; t=$((t + 3))
   done
   if [ "$t" -ge "$limit" ]; then echo "$name: not ready after ${limit} s"; rc=1; else echo "$name: ready (${t} s)"; fi
