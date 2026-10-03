@@ -82,9 +82,9 @@
   // Each demo is one simulation on its own GPU, served at its own subdomain. The page shows one at
   // a time (an open demo is a live stream) and keeps which one in the address (#towel).
   const DEMOS = [
+    { id: "bar", title: "Wipe the bar", short: "Wipe" },
     { id: "cable", title: "Route the cable", short: "Cable" },
     { id: "towel", title: "Fold the towel", short: "Towel" },
-    { id: "bar", title: "Wipe the bar", short: "Wipe" },
     { id: "peel", title: "Peel the film", short: "Peel" },
   ];
   const HOST = /sslip\.io$/.test(location.hostname) ? location.hostname : "95-133-252-186.sslip.io";
