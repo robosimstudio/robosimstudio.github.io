@@ -33,8 +33,8 @@ WORDS = {
     "title": "Route the cable",
     "reink": "New cable",
     "hint": "drag me",
-    "how": "Drag the orange ball: up lifts the cable, sideways carries it along the clips. "
-    "Drag its shadow on the bench to move the hand in or out. Lay the cable into all three. "
+    "how": "Drag the robot's hand: up lifts the cable, sideways carries it along the clips. "
+    "Drag the hand's shadow on the bench to move it in or out. Lay the cable into all three. "
     "Drag empty space to turn the view.",
     "done": "Routed!",
 }

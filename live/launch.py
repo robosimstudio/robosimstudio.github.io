@@ -66,6 +66,7 @@ def main(argv=None) -> int:
     opts.name = opts.name or opts.task
     print(f"[live] {opts.task} on GPU {gpu}, port {opts.port}, run folder {RUN_ROOT / 'run' / opts.name}", flush=True)
 
+    import handles
     import pages
     import wipe_phone as wp
 
@@ -74,6 +75,7 @@ def main(argv=None) -> int:
     pages.fast_catch_up()
     pages.lighter_meshes()
     pages.polish(wp)
+    handles.install(wp)
     if (HERE / f"task_{opts.task}.py").exists():
         module = importlib.import_module(f"task_{opts.task}")
         return module.main(opts, rest)

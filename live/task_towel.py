@@ -22,7 +22,7 @@ WORDS = {
     "title": "Fold the towel",
     "reink": "New towel",
     "hint": "drag me",
-    "how": "Drag the orange ball: up lifts the towel's edge, sideways carries it over. "
+    "how": "Drag the robot's hand: up lifts the towel's edge, sideways carries it over. "
     "Drag empty space to look around.",
     "done": "Folded!",
 }
