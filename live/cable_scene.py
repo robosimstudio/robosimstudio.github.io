@@ -423,6 +423,30 @@ def build_env():
     return build_scene().build(control_mode="joint_position")
 
 
+HAND_OPACITY = 0.3
+"""The Franka hand's housing is drawn this opaque, so the fingers and the cable in them show through
+it from the visitors' side. Drawing only: the finish table both the page and the path tracer read."""
+
+
+def see_through_hand(sim, opacity: float = HAND_OPACITY) -> str:
+    """Make the hand housing's visible shapes (the gripper body's own, not the fingers') see-through.
+    Returns a line for the log."""
+    import dataclasses
+
+    model = sim.model
+    labels = list(getattr(model, "body_label", None) or getattr(model, "body_key", None) or [])
+    hands = [b for b, k in enumerate(labels) if str(k).endswith("right_gripper")]
+    body = model.shape_body.numpy()
+    flags = model.shape_flags.numpy()
+    finishes = sim.handles.finishes
+    done = []
+    for s in np.nonzero(np.isin(body, hands))[0]:
+        if int(flags[s]) & 1 and int(s) in finishes:  # 1: VISIBLE
+            finishes[int(s)] = dataclasses.replace(finishes[int(s)], opacity=float(opacity))
+            done.append(int(s))
+    return f"hand housing see-through (opacity {opacity}): shapes {done}" if done else "hand housing: not found, drawn opaque"
+
+
 # ---------------------------------------------------------------------------------------------
 # Holding nodes: engine node constraints, re-aimed every SuperDex substep
 # ---------------------------------------------------------------------------------------------

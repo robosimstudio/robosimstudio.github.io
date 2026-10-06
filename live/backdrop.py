@@ -46,15 +46,17 @@ from dataclasses import dataclass
 import numpy as np
 
 try:
+    from robosimstudio.core.render.finish import Finish
     from robosimstudio.core.render.room import LAB, lab
     from robosimstudio.core.render.scenery import register_scenery
 except Exception as _exc:  # noqa: BLE001 -- the room is decoration: a page must still start without it
-    LAB = lab = register_scenery = None
+    Finish = LAB = lab = register_scenery = None
     UNAVAILABLE = f"{type(_exc).__name__}: {_exc}"
 else:
     UNAVAILABLE = ""
 
-__all__ = ["LEDGE", "NEAR", "PLACES", "UNAVAILABLE", "WIPE_SCENERY", "Place", "dress", "faces", "look", "robot_rear", "scenery_name"]
+__all__ = ["LEDGE", "NEAR", "PLACES", "STANDS", "UNAVAILABLE", "WIPE_SCENERY", "Place", "draw_stand", "dress", "faces", "look",
+           "robot_base", "robot_rear", "scenery_name"]
 
 WIPE_SCENERY = "rgbs_lab"
 """What the bar and the peel state (``RGBS_LOOK.scenery``): ``room.lab``, as measured, unturned."""
@@ -83,6 +85,8 @@ class Place:
     ledge_back: float | None = None
     """The same for the ledge and its rig posts; ``None`` is :attr:`back`. Zero keeps the ledge on
     the bench's far edge, as in the wipe, where nothing of the robot stands there."""
+    stand: bool = False
+    """Stand the robot on a pedestal from the floor (:func:`draw_stand`): its base is off the bench."""
     why: str = ""
 
     def setback(self, name: str) -> float:
@@ -105,6 +109,7 @@ PLACES: dict[str, Place] = {
         turn=True,
         back=0.50,
         ledge_back=0.0,
+        stand=True,
         why="the Panda stands 0.6 m behind bench_075's centre (x 0.0, 132 mm over the top), its links' "
         "bounding spheres reaching x -0.165: the ledge stays on the bench's edge, in front of it, and "
         "the slat wall goes behind it, its face at x -0.25",
@@ -162,8 +167,75 @@ def lab_towel(kit) -> None:
 
 
 def lab_cable(kit) -> None:
-    """The wipe's lab round the cable's bench (``PLACES["cable"]``)."""
+    """The wipe's lab round the cable's bench (``PLACES["cable"]``), and the Panda's stand."""
     lab(_Placed(kit, PLACES["cable"]))
+    draw_stand(kit, STANDS.get("cable"))
+
+
+# ---------------------------------------------------------------------------------------------
+# The robot's stand
+# ---------------------------------------------------------------------------------------------
+STANDS: dict[str, tuple[float, float, float, float, float]] = {}
+"""Place -> the robot base's footprint ``(x0, x1, y0, y1, z)`` in world metres (``z`` is its
+underside), measured by :func:`dress` from the built scene for a place with ``stand``. Like the
+room, the stand is scenery: no body, no collider, drawn by both kits."""
+
+STAND_COLOR = (0.22, 0.23, 0.245)
+"""Anodised dark grey, a shade over the bench apron, so the column reads against the dark floor."""
+STAND_FINISH = Finish(roughness=0.42, metallic=0.55) if Finish is not None else None
+STAND_COLUMN = 0.075
+"""The column's half-width [m]: a 150 mm square post, as a Franka pedestal's."""
+STAND_PLATE_LIP = 0.02
+"""How far the top plate runs past the base's footprint on each side [m]."""
+STAND_PLATE, STAND_FOOT = 0.012, 0.015
+"""The top plate's and the floor plate's thickness [m]."""
+
+
+def draw_stand(kit, footprint) -> None:
+    """A pedestal from the floor to the robot's base: a floor plate, a square column, a top plate
+    the base sits on. Nothing when there is no measured footprint."""
+    if footprint is None:
+        return
+    x0, x1, y0, y1, top = (float(v) for v in footprint)
+    cell = getattr(kit, "cell", None)
+    floor = float(getattr(cell, "ground_z", 0.0) or 0.0)
+    cx, cy = 0.5 * (x0 + x1), 0.5 * (y0 + y1)
+    hx, hy = 0.5 * (x1 - x0) + STAND_PLATE_LIP, 0.5 * (y1 - y0) + STAND_PLATE_LIP
+    style = dict(color=STAND_COLOR, finish=STAND_FINISH)
+    kit.box("stand_top", (cx, cy, top - 0.5 * STAND_PLATE), (hx, hy, 0.5 * STAND_PLATE), **style)
+    column_h = 0.5 * (top - STAND_PLATE - floor - STAND_FOOT)
+    kit.box("stand_column", (cx, cy, floor + STAND_FOOT + column_h), (STAND_COLUMN, STAND_COLUMN, column_h), **style)
+    kit.box("stand_foot", (cx, cy, floor + 0.5 * STAND_FOOT), (hx + 0.02, hy + 0.04, 0.5 * STAND_FOOT), **style)
+
+
+def robot_base(env) -> tuple[float, float, float, float, float] | None:
+    """The footprint of the robot's root link, ``(x0, x1, y0, y1, z_bottom)`` in world metres, from
+    its visible meshes at the pose the state holds now (a fixed base: it never moves)."""
+    from robosimstudio.core.math import transform_matrix
+
+    model = env.model
+    body = np.asarray(model.shape_body.numpy())
+    emb = getattr(env.scene, "embodiment", None)
+    shapes = getattr(getattr(emb, "range", None), "shape_indices", None)
+    if shapes is None or not len(shapes):
+        return None
+    root = min(int(body[s]) for s in shapes if body[s] >= 0)
+    flags = np.asarray(model.shape_flags.numpy())
+    xf = np.asarray(model.shape_transform.numpy(), dtype=np.float64)
+    scale = np.asarray(model.shape_scale.numpy(), dtype=np.float64)
+    pose = transform_matrix(np.asarray(env.state.body_q.numpy(), dtype=np.float64)[root])
+    pts = []
+    for s in np.nonzero(body == root)[0]:
+        src = model.shape_source[s]
+        if not int(flags[s]) & 1 or src is None or not hasattr(src, "vertices"):  # 1: VISIBLE
+            continue
+        m = pose @ transform_matrix(xf[s])
+        pts.append((np.asarray(src.vertices, dtype=np.float64) * scale[s]) @ m[:3, :3].T + m[:3, 3])
+    if not pts:
+        return None
+    p = np.concatenate(pts)
+    lo, hi = p.min(axis=0), p.max(axis=0)
+    return (float(lo[0]), float(hi[0]), float(lo[1]), float(hi[1]), float(lo[2]))
 
 
 if not UNAVAILABLE:
@@ -253,6 +325,12 @@ def dress(env, place: str) -> str:
                 return f"backdrop: {place} states the wipe's own look already ({stated})"
             return f"backdrop: no turned lab for {place!r}; it keeps {stated or 'no scenery'}"
         new = look(place)
+        stand = ""
+        if PLACES[place].stand:
+            base = robot_base(env)
+            if base is not None:
+                STANDS[place] = base
+                stand = f"; a stand under the robot's base ({base[4]:.3f} m up)"
         request = env.scene.request
         dressed = dataclasses.replace(request, render=new)
         env.scene.request = dressed
@@ -260,7 +338,7 @@ def dress(env, place: str) -> str:
             env.task = dressed
     except Exception as exc:  # noqa: BLE001 -- never keep a page from starting
         return f"backdrop: skipped for {place} ({type(exc).__name__}: {exc}); it keeps its own room"
-    return f"backdrop: the wipe's lab, {new.scenery} (was {stated or 'none'}){_clearance(env, place)}"
+    return f"backdrop: the wipe's lab, {new.scenery} (was {stated or 'none'}){stand}{_clearance(env, place)}"
 
 
 def _clearance(env, place: str) -> str:

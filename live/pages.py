@@ -197,6 +197,48 @@ def _quietly(fn) -> None:
         pass
 
 
+CREASE_DEG = 35.0
+"""Edges sharper than this keep hard normals when a mesh is welded for the browser."""
+
+
+def lighter_meshes(crease_deg: float = CREASE_DEG) -> None:
+    """Weld the meshes the page sends. STL links arrive unwelded, three private corners a triangle, so
+    the Panda's 12-15k-triangle links went out at 0.8-1.1 MB each and the cable's first load was
+    4.4 MB to the bar's 1.4. Welded, then split again along edges sharper than ``crease_deg`` so hard
+    corners stay hard, the same triangles cost about a fifth of the vertices; the geometry is
+    untouched (a quadric decimation to 5k frayed the open rims). The studio builds each prototype's
+    GLB once (``ViewerStudio._glb``, cached), so this runs once a mesh at load, ~30 ms for a Panda
+    link. Only the browser's copy changes. Call before the page is built."""
+    import trimesh
+
+    import robosimstudio_studio.garments as g
+
+    cls = g.ViewerStudio
+    if getattr(cls._glb, "_rsw", False):
+        return
+    glb = cls._glb
+
+    def _glb(self, data, color, finish):
+        try:
+            idx = np.asarray(data["indices"])
+            if not finish.texture and idx.size >= 1500:  # a textured finish unwelds again for its UVs
+                pts = np.asarray(data["points"], dtype=np.float32).reshape(-1, 3)
+                welded, inverse = np.unique(np.round(pts, 6), axis=0, return_inverse=True)
+                if len(welded) < 0.6 * len(pts):
+                    faces = inverse.reshape(-1)[idx.reshape(-1, 3)]
+                    faces = faces[(faces[:, 0] != faces[:, 1]) & (faces[:, 1] != faces[:, 2]) & (faces[:, 0] != faces[:, 2])]
+                    mesh = trimesh.graph.smooth_shade(trimesh.Trimesh(welded, faces, process=False),
+                                                      angle=np.radians(crease_deg))
+                    data = {**data, "points": np.asarray(mesh.vertices, dtype=np.float32),
+                            "indices": np.asarray(mesh.faces, dtype=idx.dtype).reshape(-1)}
+        except Exception as exc:  # never lose a mesh over its diet
+            print(f"[live] mesh sent as built ({type(exc).__name__}: {exc})", flush=True)
+        return glb(self, data, color, finish)
+
+    _glb._rsw = True
+    cls._glb = _glb
+
+
 def opening_camera(server, look, eye, fov_deg: float = 55.0) -> None:
     """Where a new viewer's camera starts, before any of the page's own messages reach it: the page
     aims each viewer once its catch-up is through, and until then viser drew from its default spot

@@ -61,6 +61,7 @@ def main(opts, rest) -> int:
     t = time.time()
     env = cs.build_env()
     print(f"[phone] {backdrop.dress(env, 'cable')}", flush=True)
+    print(f"[phone] {cs.see_through_hand(env)}", flush=True)
     holds = cs.Holds(env)
     wp.VIEWS["cable"] = cs.view()
     print(f"[phone] scene built in {pages.stamp(t)}", flush=True)
