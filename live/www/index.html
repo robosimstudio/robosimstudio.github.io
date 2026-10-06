@@ -53,39 +53,53 @@
   .dot.live { background: var(--live); }
   .short { display: none; }
 
-  /* ---- the navigation page */
-  #home { flex: 1; overflow-y: auto; }
+  /* ---- the navigation page: the four clips fill the window as its background, the words in the middle */
+  body:not(.in-demo) header { display: none; }
+  #home { flex: 1; position: relative; min-height: 0; overflow: hidden; background: #0d0d0f; }
   body.in-demo #home { display: none; }
-  .intro { max-width: 1120px; margin: 0 auto; padding: 28px 16px 8px; }
-  .intro h1 { font-size: clamp(24px, 3.4vw, 34px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .grid { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; }
+  .card {
+    position: relative; overflow: hidden; border: 0; padding: 0; margin: 0; cursor: pointer; background: #27272a;
+    font: inherit; color: #fff; text-align: left;
+  }
+  .card video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
+    filter: brightness(0.9); transition: transform 0.5s ease, filter 0.3s ease;
+  }
+  .card:hover video, .card:focus-visible video { transform: scale(1.03); filter: brightness(1.05); }
+  /* each tile's label in its outer corner, clear of the words in the middle, on a soft shade */
+  .card::before {
+    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+    background: radial-gradient(ellipse at var(--corner), rgba(0, 0, 0, 0.55), transparent 55%);
+  }
+  .card:nth-child(1) { --corner: 0% 0%; }
+  .card:nth-child(2) { --corner: 100% 0%; }
+  .card:nth-child(3) { --corner: 0% 100%; }
+  .card:nth-child(4) { --corner: 100% 100%; }
+  .card .body {
+    position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 2px; padding: 16px 20px;
+    max-width: min(360px, 80%); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  }
+  .card:nth-child(1) .body { top: 0; left: 0; }
+  .card:nth-child(2) .body { top: 0; right: 0; text-align: right; align-items: flex-end; }
+  .card:nth-child(3) .body { bottom: 0; left: 0; }
+  .card:nth-child(4) .body { bottom: 0; right: 0; text-align: right; align-items: flex-end; }
+  .card .title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 21px; }
+  .card .what { font-size: 14px; opacity: 0.95; }
+  .card .go { font-weight: 700; font-size: 14px; color: #ffb35c; }
+  .intro {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3;
+    width: min(500px, calc(100% - 32px)); padding: 22px 26px; border-radius: 16px; color: var(--ink);
+    background: color-mix(in srgb, var(--card) 90%, transparent); backdrop-filter: blur(10px);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+  }
+  .intro h1 { font-size: clamp(24px, 3vw, 32px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
   .intro h1 span { color: var(--accent); }
-  .intro p { margin: 0 0 12px; color: var(--muted); max-width: 70ch; }
-  .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 8px 20px;
-         margin: 4px 0 0; padding: 0; list-style: none; color: var(--ink); font-size: 14px; }
+  .intro p { margin: 0 0 12px; color: var(--muted); }
+  .how { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; color: var(--ink); font-size: 14px; }
   .how li { display: flex; gap: 8px; align-items: baseline; }
   .how b { color: var(--accent); font-weight: 700; }
-  .grid { max-width: 1120px; margin: 0 auto; padding: 16px 16px 40px; display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  /* a wide screen: the words beside the clips, and the 2 x 2 sized to the window's height so all four show */
-  @media (min-width: 1100px) {
-    #home { display: grid; grid-template-columns: minmax(260px, 330px) auto; justify-content: center; align-content: start; }
-    .intro { margin: 0; padding: 28px 8px 0 24px; }
-    .intro p { font-size: 14px; }
-    .how { grid-template-columns: 1fr; gap: 10px; margin-top: 6px; }
-    .grid { margin: 0; padding: 20px 24px 20px 16px; max-width: none; width: min(calc(100vw - 390px), calc(160vh - 390px)); }
-  }
-  .card {
-    display: flex; flex-direction: column; text-align: left; color: inherit; background: var(--card); padding: 0;
-    border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; font: inherit;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-  }
-  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--shade); }
-  .card video { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; background: #3f3f46; }
-  .card .body { padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 3px; }
-  .card .title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 17px; }
-  .card .go { margin-left: auto; color: var(--accent); font-weight: 600; font-size: 14px; white-space: nowrap; }
-  .card .what { color: var(--muted); font-size: 14px; margin: 0; display: -webkit-box; -webkit-line-clamp: 2;
-                -webkit-box-orient: vertical; overflow: hidden; }
+  .pick { margin: 14px 0 0; font-weight: 600; text-align: center; }
 
   /* ---- a demo, and its loading bar */
   #demo { display: none; flex: 1; position: relative; min-height: 0; }
@@ -111,10 +125,17 @@
     .long { display: none; }
     .short { display: inline; }
     nav button { padding: 6px 10px; }
-    .grid { gap: 10px; padding: 10px 10px 28px; }
-    .card .body { padding: 8px 10px 10px; }
-    .card .title { font-size: 15px; }
+    .card .body { padding: 10px 12px; max-width: 100%; }
+    /* a narrow tile: the name on one line, "Try it live" under it */
+    .card .title { font-size: 15px; gap: 6px; flex-wrap: wrap; white-space: nowrap; }
+    .card:nth-child(2n) .title { justify-content: flex-end; }
+    .card .title .go { flex-basis: 100%; font-size: 12px; }
     .card .what { display: none; }
+    .intro { padding: 14px 16px; border-radius: 14px; }
+    .intro h1 { font-size: 21px; margin-bottom: 4px; }
+    .intro p { font-size: 13px; margin-bottom: 8px; }
+    .how { font-size: 13px; gap: 5px; }
+    .pick { margin-top: 8px; font-size: 13px; }
   }
   @media (max-width: 560px) {
     body.in-demo .mark { display: none; }
@@ -137,13 +158,13 @@
 <section id="home">
   <div class="intro">
     <h1>RoboSimStudio <span>Live</span></h1>
-    <p>Four robot tasks, each simulated live on its own GPU. These are not recordings: pick one and you drive the robot,
-      and the sponge, cable, towel or film answer with simulated physics.</p>
+    <p>Four robot tasks, each simulated live on its own GPU: not recordings. Pick one and drive the robot yourself.</p>
     <ul class="how">
       <li><b>1</b><span>Drag the <b>orange ball</b> to move the robot's hand. It follows at its real speed limit.</span></li>
       <li><b>2</b><span>Drag empty space to look around; scroll or pinch to zoom. <b>Reset view</b> brings the camera back.</span></li>
       <li><b>3</b><span>One person drives at a time; everyone else watches the same simulation. <b>New&nbsp;&hellip;</b> starts the task over.</span></li>
     </ul>
+    <p class="pick">Pick a demo to start.</p>
   </div>
   <div class="grid" id="grid"></div>
 </section>

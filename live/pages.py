@@ -170,12 +170,22 @@ run the one line that tells the embedding page."""
 def ready_ping(server) -> None:
     """Tell each new viewer's embedding page when its scene has arrived (needs ``fast_catch_up``)."""
 
-    def ping(client_id: int) -> None:
-        client = server.get_clients().get(client_id)
-        if client is None:
+    def send(client_id: int) -> None:
+        # viser registers a new viewer's handle from a worker thread, and a short catch-up can finish
+        # first (the bar, towel and peel did; the cable's long one hid it): wait for the handle
+        for _ in range(100):
+            client = server.get_clients().get(client_id)
+            if client is not None:
+                break
+            time.sleep(0.03)
+        else:
+            print(f"[live] ready ping: viewer {client_id} never registered", flush=True)
             return
         handle = client.gui.add_html(READY_PING, order=1001)
         threading.Timer(5.0, lambda: _quietly(handle.remove)).start()
+
+    def ping(client_id: int) -> None:  # called on viser's event-loop thread: never wait there
+        threading.Thread(target=send, args=(client_id,), daemon=True, name="ready-ping").start()
 
     server._websock_server._broadcast_buffer.on_caught_up = ping
 
