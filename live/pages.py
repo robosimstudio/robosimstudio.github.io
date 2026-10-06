@@ -95,7 +95,16 @@ def fast_catch_up() -> None:
     async def window_generator(self, client_id: int):
         last_sent_id = -1
         flush_wait = self.event_loop.create_task(self.flush_event.wait())
+        caught_up = announce = False
         while not self.done:
+            if announce:  # the window that finished the catch-up has been sent: tell whoever listens
+                announce = False
+                hook = getattr(self, "on_caught_up", None)
+                if hook is not None:
+                    try:
+                        hook(client_id)
+                    except Exception as exc:  # a page detail must never stall the stream
+                        print(f"[live] on_caught_up: {type(exc).__name__}: {exc}", flush=True)
             window = []
             most_recent_message_id = self.message_counter - 1
             gap = most_recent_message_id - last_sent_id
@@ -127,8 +136,12 @@ def fast_catch_up() -> None:
                     if message is not None and message.excluded_self_client != client_id:
                         window.append(message)
 
+            if not caught_up and self.persistent_messages and last_sent_id >= most_recent_message_id:
+                caught_up = announce = True  # fires once this window is out (or now, if it is empty)
             if len(window) > 0:
                 yield window
+            elif announce:
+                continue
             else:
                 await self.message_event.wait()
                 self.message_event.clear()
@@ -143,6 +156,35 @@ def fast_catch_up() -> None:
 
     window_generator._rsw = True
     cls.window_generator = window_generator
+
+
+READY_PING = (
+    '<img src="data:," alt="" width="0" height="0" style="position:absolute" '
+    "onerror=\"try{parent.postMessage({rsw:'ready'},'*')}catch(e){};this.remove()\">"
+)
+"""Sent to one viewer once the scene has gone out to it (``fast_catch_up``'s hook): the front page's
+loading bar waits for this. viser renders a panel's HTML raw, so an image that fails to load can
+run the one line that tells the embedding page."""
+
+
+def ready_ping(server) -> None:
+    """Tell each new viewer's embedding page when its scene has arrived (needs ``fast_catch_up``)."""
+
+    def ping(client_id: int) -> None:
+        client = server.get_clients().get(client_id)
+        if client is None:
+            return
+        handle = client.gui.add_html(READY_PING, order=1001)
+        threading.Timer(5.0, lambda: _quietly(handle.remove)).start()
+
+    server._websock_server._broadcast_buffer.on_caught_up = ping
+
+
+def _quietly(fn) -> None:
+    try:
+        fn()
+    except Exception:
+        pass
 
 
 def opening_camera(server, look, eye, fov_deg: float = 55.0) -> None:
@@ -218,6 +260,7 @@ def polish(wp) -> None:
         )
         self.phone_widgets["progress"].visible = False  # completion is not shown
         self.server.gui.add_html(HIDE_VISER_MENU, order=1000)
+        ready_ping(self.server)
         view = wp.VIEWS.get(self.scene_kind)
         if view is not None:  # the opening view, as aim() sets it, for the very first frame
             look, offset = (np.asarray(v, dtype=np.float64) for v in view)

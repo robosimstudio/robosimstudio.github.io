@@ -7,32 +7,40 @@
 <meta name="description" content="Robot simulations running live on GPUs. Drag the robot and feel the physics.">
 <style>
   :root {
-    --bar: #ffffff; --ink: #18181b; --muted: #6b6b73; --line: #e4e4e0; --tab-on: #18181b;
-    --tab-on-ink: #ffffff; --accent: #ff8c00; --live: #16a34a; --wait: #a1a1aa; --stage: #e9e9e6;
+    --bar: #ffffff; --ink: #18181b; --muted: #62626a; --line: #e4e4e0; --tab-on: #18181b; --tab-on-ink: #ffffff;
+    --accent: #ff8c00; --live: #16a34a; --wait: #a1a1aa; --stage: #e9e9e6; --page: #f4f4f2; --card: #ffffff;
+    --shade: rgba(24, 24, 27, 0.10);
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bar: #141416; --ink: #ececee; --muted: #a1a1aa; --line: #2a2a2f; --tab-on: #ececee;
-      --tab-on-ink: #141416; --stage: #1b1b1e;
+      --bar: #141416; --ink: #ececee; --muted: #a1a1aa; --line: #2a2a2f; --tab-on: #ececee; --tab-on-ink: #141416;
+      --stage: #1b1b1e; --page: #111113; --card: #1b1b1e; --shade: rgba(0, 0, 0, 0.45);
     }
   }
   :root[data-theme="dark"] {
-    --bar: #141416; --ink: #ececee; --muted: #a1a1aa; --line: #2a2a2f; --tab-on: #ececee;
-    --tab-on-ink: #141416; --stage: #1b1b1e;
+    --bar: #141416; --ink: #ececee; --muted: #a1a1aa; --line: #2a2a2f; --tab-on: #ececee; --tab-on-ink: #141416;
+    --stage: #1b1b1e; --page: #111113; --card: #1b1b1e; --shade: rgba(0, 0, 0, 0.45);
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
-    display: flex; flex-direction: column; background: var(--stage); color: var(--ink); overflow: hidden;
-    font: 15px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; flex-direction: column; background: var(--page); color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   }
+  body.in-demo { overflow: hidden; background: var(--stage); }
   header {
     flex: none; display: flex; align-items: center; gap: 12px; padding: 8px 16px;
     padding-top: max(8px, env(safe-area-inset-top)); background: var(--bar); border-bottom: 1px solid var(--line);
   }
-  .mark { font-weight: 700; white-space: nowrap; letter-spacing: -0.01em; }
+  .mark { font-weight: 700; white-space: nowrap; letter-spacing: -0.01em; color: inherit; text-decoration: none; }
   .mark span { color: var(--accent); }
-  nav { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+  .back {
+    display: none; white-space: nowrap; color: var(--ink); text-decoration: none; padding: 6px 10px;
+    border-radius: 999px; border: 1px solid var(--line);
+  }
+  body.in-demo .back { display: inline-block; }
+  nav { display: none; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+  body.in-demo nav { display: flex; }
   nav::-webkit-scrollbar { display: none; }
   nav button {
     flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
@@ -40,25 +48,76 @@
   }
   nav button:hover { border-color: var(--muted); }
   nav button[aria-selected="true"] { background: var(--tab-on); border-color: var(--tab-on); color: var(--tab-on-ink); }
-  nav button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  nav button:focus-visible, .card:focus-visible, .back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wait); flex: none; }
   .dot.live { background: var(--live); }
   .short { display: none; }
-  main { flex: 1; position: relative; min-height: 0; }
-  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--stage); }
-  .note {
-    position: absolute; inset: 0; display: none; place-items: center; text-align: center; padding: 16px;
-    color: var(--muted); background: var(--stage);
+
+  /* ---- the navigation page */
+  #home { flex: 1; overflow-y: auto; }
+  body.in-demo #home { display: none; }
+  .intro { max-width: 1120px; margin: 0 auto; padding: 28px 16px 8px; }
+  .intro h1 { font-size: clamp(24px, 3.4vw, 34px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .intro h1 span { color: var(--accent); }
+  .intro p { margin: 0 0 12px; color: var(--muted); max-width: 70ch; }
+  .how { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 8px 20px;
+         margin: 4px 0 0; padding: 0; list-style: none; color: var(--ink); font-size: 14px; }
+  .how li { display: flex; gap: 8px; align-items: baseline; }
+  .how b { color: var(--accent); font-weight: 700; }
+  .grid { max-width: 1120px; margin: 0 auto; padding: 16px 16px 40px; display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  /* a wide screen: the words beside the clips, and the 2 x 2 sized to the window's height so all four show */
+  @media (min-width: 1100px) {
+    #home { display: grid; grid-template-columns: minmax(260px, 330px) auto; justify-content: center; align-content: start; }
+    .intro { margin: 0; padding: 28px 8px 0 24px; }
+    .intro p { font-size: 14px; }
+    .how { grid-template-columns: 1fr; gap: 10px; margin-top: 6px; }
+    .grid { margin: 0; padding: 20px 24px 20px 16px; max-width: none; width: min(calc(100vw - 390px), calc(160vh - 390px)); }
   }
-  .note.on { display: grid; }
+  .card {
+    display: flex; flex-direction: column; text-align: left; color: inherit; background: var(--card); padding: 0;
+    border: 1px solid var(--line); border-radius: 12px; overflow: hidden; cursor: pointer; font: inherit;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--shade); }
+  .card video { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; background: #3f3f46; }
+  .card .body { padding: 10px 14px 12px; display: flex; flex-direction: column; gap: 3px; }
+  .card .title { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 17px; }
+  .card .go { margin-left: auto; color: var(--accent); font-weight: 600; font-size: 14px; white-space: nowrap; }
+  .card .what { color: var(--muted); font-size: 14px; margin: 0; display: -webkit-box; -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical; overflow: hidden; }
+
+  /* ---- a demo, and its loading bar */
+  #demo { display: none; flex: 1; position: relative; min-height: 0; }
+  body.in-demo #demo { display: block; }
+  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--stage); }
+  .loading {
+    position: absolute; inset: 0; display: grid; place-items: center; background: var(--stage) center / cover no-repeat;
+    transition: opacity 0.45s ease; z-index: 2;
+  }
+  .loading::before { content: ""; position: absolute; inset: 0; background: var(--stage); opacity: 0.55; backdrop-filter: blur(6px); }
+  .loading.done { opacity: 0; pointer-events: none; }
+  .loading .box {
+    position: relative; width: min(360px, calc(100% - 32px)); padding: 18px 20px; border-radius: 12px; background: var(--card);
+    box-shadow: 0 10px 30px var(--shade); text-align: center;
+  }
+  .loading h2 { margin: 0 0 4px; font-size: 18px; }
+  .loading .msg { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
+  .bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; }
+
   @media (max-width: 760px) {
     header { gap: 8px; padding-left: 10px; padding-right: 10px; }
     .long { display: none; }
     .short { display: inline; }
     nav button { padding: 6px 10px; }
+    .grid { gap: 10px; padding: 10px 10px 28px; }
+    .card .body { padding: 8px 10px 10px; }
+    .card .title { font-size: 15px; }
+    .card .what { display: none; }
   }
   @media (max-width: 560px) {
-    .mark { display: none; }
+    body.in-demo .mark { display: none; }
     nav { justify-content: space-between; }
     nav button { flex: 1; justify-content: center; }
   }
@@ -71,27 +130,50 @@
 </head>
 <body>
 <header>
-  <div class="mark">RoboSimStudio <span>Live</span></div>
+  <a class="mark" href="#" aria-label="All demos">RoboSimStudio <span>Live</span></a>
+  <a class="back" href="#">&larr; All demos</a>
   <nav id="tabs" role="tablist" aria-label="Demos"></nav>
 </header>
-<main>
-  <iframe id="demo" title="Live simulation" allow="fullscreen; clipboard-write"></iframe>
-  <div class="note" id="note">This simulation is restarting. It will be back in a minute.</div>
+<section id="home">
+  <div class="intro">
+    <h1>RoboSimStudio <span>Live</span></h1>
+    <p>Four robot tasks, each simulated live on its own GPU. These are not recordings: pick one and you drive the robot,
+      and the sponge, cable, towel or film answer with simulated physics.</p>
+    <ul class="how">
+      <li><b>1</b><span>Drag the <b>orange ball</b> to move the robot's hand. It follows at its real speed limit.</span></li>
+      <li><b>2</b><span>Drag empty space to look around; scroll or pinch to zoom. <b>Reset view</b> brings the camera back.</span></li>
+      <li><b>3</b><span>One person drives at a time; everyone else watches the same simulation. <b>New&nbsp;&hellip;</b> starts the task over.</span></li>
+    </ul>
+  </div>
+  <div class="grid" id="grid"></div>
+</section>
+<main id="demo">
+  <iframe id="frame" title="Live simulation" allow="fullscreen; clipboard-write"></iframe>
+  <div class="loading" id="loading" aria-live="polite">
+    <div class="box">
+      <h2 id="ltitle">Loading</h2>
+      <p class="msg" id="lmsg">Connecting to the simulation&hellip;</p>
+      <div class="bar"><i id="lbar"></i></div>
+    </div>
+  </div>
 </main>
 <script>
-  // Each demo is one simulation on its own GPU, served at its own subdomain. The page shows one at
-  // a time (an open demo is a live stream) and keeps which one in the address (#towel).
+  // The navigation page shows the four demos as looping clips; a demo is one live simulation on its own GPU,
+  // served at its own subdomain and shown in the frame below the tabs (the address keeps which: #towel).
+  // Its loading bar waits for the demo's own "ready": the page sends it once the scene has reached this browser.
   const DEMOS = [
-    { id: "bar", title: "Wipe the bar", short: "Wipe" },
-    { id: "cable", title: "Route the cable", short: "Cable" },
-    { id: "towel", title: "Fold the towel", short: "Towel" },
-    { id: "peel", title: "Peel the film", short: "Peel" },
+    { id: "bar", title: "Wipe the bar", short: "Wipe",
+      what: "Press a foam sponge onto a chrome bar and wipe the marker off; the page shows its force and pressure." },
+    { id: "cable", title: "Route the cable", short: "Cable", what: "Lift a cable off the bench and lay it into three clips." },
+    { id: "towel", title: "Fold the towel", short: "Towel", what: "Lift a towel by its edge and fold it over; a slider sets how soft it is." },
+    { id: "peel", title: "Peel the film", short: "Peel", what: "Pull the protective film off a phone, one adhesive bond at a time." },
   ];
   const HOST = /sslip\.io$/.test(location.hostname) ? location.hostname : "95-133-252-186.sslip.io";
-  const tabs = document.getElementById("tabs");
-  const frame = document.getElementById("demo");
-  const note = document.getElementById("note");
-  const live = {};
+  const url = (d) => `https://${d.id}.${HOST}/`;
+  const tabs = document.getElementById("tabs"), grid = document.getElementById("grid");
+  const frame = document.getElementById("frame"), loading = document.getElementById("loading");
+  const lbar = document.getElementById("lbar"), lmsg = document.getElementById("lmsg"), ltitle = document.getElementById("ltitle");
+  const live = {}, misses = {}, videos = [];
 
   for (const d of DEMOS) {
     const b = document.createElement("button");
@@ -100,46 +182,82 @@
     b.innerHTML = `<span class="dot"></span><span class="long">${d.title}</span><span class="short">${d.short}</span>`;
     b.addEventListener("click", () => { location.hash = d.id; });
     tabs.appendChild(b);
+
+    const c = document.createElement("button");
+    c.className = "card";
+    c.dataset.id = d.id;
+    c.innerHTML = `<video src="video/${d.id}.mp4" poster="video/${d.id}.jpg" muted loop playsinline autoplay preload="auto"></video>
+      <span class="body"><span class="title"><span class="dot"></span>${d.title}<span class="go">Try it live &rarr;</span></span>
+      <span class="what">${d.what}</span></span>`;
+    c.addEventListener("click", () => { location.hash = d.id; });
+    grid.appendChild(c);
+    videos.push(c.querySelector("video"));
   }
 
-  function current() {
-    const id = location.hash.slice(1);
-    return DEMOS.find((d) => d.id === id) || DEMOS[0];
+  // ---- the loading bar: creeps toward each stage's mark, fills on "ready", then fades
+  let stage = "off", shown = 0, target = 0, last = 0, readyAt = 0, openedAt = 0;
+  const MARKS = { page: 0.45, scene: 0.9, ready: 1 };
+  function step(now) {
+    const dt = Math.min(0.1, (now - (last || now)) / 1000);
+    last = now;
+    if (stage !== "off") {
+      shown += (target - shown) * Math.min(1, dt * (stage === "ready" ? 12 : 1.6));
+      lbar.style.width = `${(100 * shown).toFixed(1)}%`;
+      if (stage === "ready" && now - readyAt > 450) { loading.classList.add("done"); stage = "off"; }
+      else if (stage !== "ready" && now - openedAt > 20000) lmsg.textContent = "Still starting up; this simulation may be restarting.";
+    }
+    requestAnimationFrame(step);
   }
+  requestAnimationFrame(step);
+  function startLoading(d) {
+    stage = "page"; shown = 0; target = MARKS.page; openedAt = performance.now();
+    lbar.style.width = "0%";
+    ltitle.textContent = d.title;
+    lmsg.textContent = "Connecting to the simulation…";
+    loading.style.backgroundImage = `url(video/${d.id}.jpg)`;
+    loading.classList.remove("done");
+  }
+  frame.addEventListener("load", () => {
+    if (stage === "page") { stage = "scene"; target = MARKS.scene; lmsg.textContent = "Loading the scene…"; }
+  });
+  addEventListener("message", (e) => {
+    if (e.source !== frame.contentWindow || !e.data || e.data.rsw !== "ready" || stage === "off" || stage === "ready") return;
+    stage = "ready"; target = MARKS.ready; readyAt = performance.now(); lmsg.textContent = "Ready";
+  });
 
+  // ---- routing: no hash is the navigation page, #<id> a demo
+  function current() { return DEMOS.find((d) => d.id === location.hash.slice(1)) || null; }
   function show() {
     const d = current();
+    document.body.classList.toggle("in-demo", !!d);
+    for (const v of videos) { if (d) v.pause(); else v.play().catch(() => {}); }
+    if (!d) {  // back on the navigation page: let go of the demo (no hidden stream, no held driver's seat)
+      document.title = "RoboSimStudio Live";
+      if (frame.dataset.src) { frame.dataset.src = ""; frame.src = "about:blank"; stage = "off"; }
+      return;
+    }
     for (const b of tabs.children) b.setAttribute("aria-selected", String(b.dataset.id === d.id));
     tabs.querySelector(`[data-id="${d.id}"]`).scrollIntoView({ block: "nearest", inline: "nearest" });
-    const url = `https://${d.id}.${HOST}/`;
-    if (frame.dataset.src !== url) {
-      frame.dataset.src = url;
-      frame.src = url;
+    if (frame.dataset.src !== url(d)) {
+      frame.dataset.src = url(d);
+      startLoading(d);
+      frame.src = url(d);
     }
     document.title = `${d.title} · RoboSimStudio Live`;
-    note.classList.toggle("on", live[d.id] === false);
   }
 
   // Which simulations answer: the gateway's status route says 204 (up) or 502 (down or restarting).
-  // Two misses in a row before a demo counts as down (one lost request on a phone is not an outage),
-  // and nothing here reloads the open demo: its page reconnects by itself when the server is back.
-  const misses = {};
   async function poll() {
     await Promise.all(DEMOS.map(async (d) => {
       let ok = false;
-      try {
-        ok = (await fetch(`https://${HOST}/status/${d.id}`, { cache: "no-store" })).ok;
-      } catch (e) {
-        ok = false;
-      }
+      try { ok = (await fetch(`https://${HOST}/status/${d.id}`, { cache: "no-store" })).ok; } catch (e) { ok = false; }
       misses[d.id] = ok ? 0 : (misses[d.id] || 0) + 1;
       live[d.id] = misses[d.id] < 2;
-      tabs.querySelector(`[data-id="${d.id}"] .dot`).classList.toggle("live", ok);
+      for (const el of document.querySelectorAll(`[data-id="${d.id}"] .dot`)) el.classList.toggle("live", ok);
     }));
-    show();
   }
 
-  window.addEventListener("hashchange", show);
+  addEventListener("hashchange", show);
   show();
   poll();
   setInterval(poll, 20000);
