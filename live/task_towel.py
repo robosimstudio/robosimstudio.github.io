@@ -188,6 +188,8 @@ def main(opts, rest) -> int:
                     self.refresh_view()
             self._set_softness(self.softness)
             self._lay_out()
+            look, offset = (np.asarray(v, dtype=np.float64) for v in wp.VIEWS["towel"])
+            pages.opening_camera(self.server, look, look + offset * self.opts.distance)  # the carry's view
             for client in self.server.get_clients().values():
                 self.aim(client)
             print(

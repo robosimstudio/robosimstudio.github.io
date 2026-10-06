@@ -71,6 +71,7 @@ def main(argv=None) -> int:
 
     wp.HERE = RUN_ROOT  # its run folder is HERE/run/<name>: keep ours out of phone_demo/
     pages.harden_websockets()
+    pages.fast_catch_up()
     pages.polish(wp)
     if (HERE / f"task_{opts.task}.py").exists():
         module = importlib.import_module(f"task_{opts.task}")

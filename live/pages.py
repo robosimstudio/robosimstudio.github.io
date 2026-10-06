@@ -7,10 +7,13 @@ demo's page (``~/rss_ws/phone_demo``), imported by path and never edited.
 
 from __future__ import annotations
 
+import math
 import os
 import threading
 import time
 from pathlib import Path
+
+import numpy as np
 
 RUN_ROOT = Path(os.environ.get("RSW_LIVE", Path.home() / "rss_ws" / "rsw_live"))
 
@@ -68,6 +71,89 @@ def harden_websockets() -> None:
 
     logged_serve._rsw = True
     wss.serve = logged_serve
+
+
+def fast_catch_up() -> None:
+    """A new viewer's catch-up in O(what is still buffered), not O(everything ever sent).
+
+    viser's ``AsyncMessageBuffer.window_generator`` starts every new connection at message id 0 and
+    steps through every id ever pushed, though nearly all were superseded long ago and dropped. On a
+    page that has drawn for days that is hundreds of millions of Python steps: the cable's new
+    viewers waited 26 s for their camera, buttons and robot (measured 10-06), while the loop held the
+    GIL on the one thread that serves every viewer -- so everyone already watching froze as well.
+    This version reads the ids still buffered (the dict keeps them in id order) whenever the gap to
+    the newest message is far larger than the buffer, and otherwise behaves exactly as viser's own.
+    Call before the page starts its server."""
+    import asyncio
+
+    from viser.infra import _async_message_buffer as amb
+
+    cls = amb.AsyncMessageBuffer
+    if getattr(cls.window_generator, "_rsw", False):
+        return
+
+    async def window_generator(self, client_id: int):
+        last_sent_id = -1
+        flush_wait = self.event_loop.create_task(self.flush_event.wait())
+        while not self.done:
+            window = []
+            most_recent_message_id = self.message_counter - 1
+            gap = most_recent_message_id - last_sent_id
+            if self.persistent_messages and gap > 4 * len(self.message_from_id) + self.max_window_size:
+                if self.atomic_counter == 0:
+                    with self.buffer_lock:
+                        pending = [k for k in self.message_from_id if last_sent_id < k <= most_recent_message_id]
+                    taken = pending[: self.max_window_size]
+                    for k in taken:
+                        message = self.message_from_id.get(k, None)
+                        if message is not None and message.excluded_self_client != client_id:
+                            window.append(message)
+                    # every id not taken up to the newest was superseded: skip past it
+                    last_sent_id = taken[-1] if len(pending) > len(taken) else most_recent_message_id
+            else:  # viser's own loop
+                while (
+                    last_sent_id < most_recent_message_id
+                    and len(window) < self.max_window_size
+                    and self.atomic_counter == 0
+                ):
+                    last_sent_id += 1
+                    if self.persistent_messages:
+                        message = self.message_from_id.get(last_sent_id, None)
+                    else:
+                        with self.buffer_lock:
+                            message = self.message_from_id.pop(last_sent_id, None)
+                            if message is not None:
+                                self.id_from_redundancy_key.pop(message.redundancy_key(), None)
+                    if message is not None and message.excluded_self_client != client_id:
+                        window.append(message)
+
+            if len(window) > 0:
+                yield window
+            else:
+                await self.message_event.wait()
+                self.message_event.clear()
+
+            most_recent_message_id = self.message_counter - 1
+            if len(window) == 0 or most_recent_message_id == last_sent_id:
+                done, pending_tasks = await asyncio.wait([flush_wait], timeout=self.window_duration_sec)
+                del pending_tasks
+                if flush_wait in done and not self.done:
+                    self.flush_event.clear()
+                    flush_wait = self.event_loop.create_task(self.flush_event.wait())
+
+    window_generator._rsw = True
+    cls.window_generator = window_generator
+
+
+def opening_camera(server, look, eye, fov_deg: float = 55.0) -> None:
+    """Where a new viewer's camera starts, before any of the page's own messages reach it: the page
+    aims each viewer once its catch-up is through, and until then viser drew from its default spot
+    outside the room (the walls)."""
+    cam = server.initial_camera
+    cam.up = (0.0, 0.0, 1.0)
+    cam.fov = math.radians(fov_deg)
+    cam.position = tuple(float(v) for v in eye)
+    cam.look_at = tuple(float(v) for v in look)
 
 
 def polish(wp) -> None:
@@ -132,6 +218,10 @@ def polish(wp) -> None:
         )
         self.phone_widgets["progress"].visible = False  # completion is not shown
         self.server.gui.add_html(HIDE_VISER_MENU, order=1000)
+        view = wp.VIEWS.get(self.scene_kind)
+        if view is not None:  # the opening view, as aim() sets it, for the very first frame
+            look, offset = (np.asarray(v, dtype=np.float64) for v in view)
+            opening_camera(self.server, look, look + offset * self.opts.distance)
 
     cls._on_connect, cls.build_gui, cls.set_readouts = _on_connect, _build_gui, set_readouts
     cls._rsw_polished = True
