@@ -18,6 +18,7 @@ TASKS=(
 )
 mkdir -p "$RSW_LIVE"/{gw,www,logs,run}
 cp "$LIVE/www/index.html" "$RSW_LIVE/www/index.html"
+mkdir -p "$RSW_LIVE/www/logos" && cp "$LIVE/www/logos/"* "$RSW_LIVE/www/logos/"
 
 alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 
