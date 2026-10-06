@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Robot Sim Studio (RSS) Real2Sim case studies</title>
+<title>Robot Sim Studio (RSS) – Real2Sim case studies</title>
 <meta name="description" content="Real2Sim case studies from Robot Sim Studio (RSS), simulated live on GPUs: drag the robot and feel the physics.">
 <style>
   :root {
@@ -116,6 +116,34 @@
   .how b { color: var(--accent); font-weight: 700; }
   .pick { margin: 14px 0 0; font-weight: 600; text-align: center; }
 
+  /* ---- a demo's corner card: the real task, and how the scene was generated */
+  .pip {
+    position: absolute; z-index: 3; left: 12px; top: 12px; width: min(300px, 46vw); background: var(--card); color: var(--ink);
+    border-radius: 12px; overflow: hidden; box-shadow: 0 8px 28px var(--shade), 0 0 0 1px var(--line); transition: width 0.25s ease;
+  }
+  .pip.big { width: min(760px, calc(100% - 24px)); }
+  .pip-head { display: flex; align-items: center; gap: 4px; padding: 6px 4px 6px 8px; }
+  .pip-tabs { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+  .pip-tabs::-webkit-scrollbar { display: none; }
+  .pip-tabs button {
+    flex: none; font: inherit; font-size: 12.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line);
+    background: transparent; color: var(--ink); cursor: pointer; white-space: nowrap;
+  }
+  .pip-tabs button[aria-selected="true"] { background: var(--tab-on); border-color: var(--tab-on); color: var(--tab-on-ink); }
+  .pip-icon {
+    flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent;
+    color: var(--muted); font: inherit; font-size: 17px; line-height: 1; cursor: pointer;
+  }
+  .pip-icon:hover { color: var(--ink); background: var(--line); }
+  .pip video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; cursor: zoom-in; }
+  .pip.big video { cursor: zoom-out; }
+  .pip-note { margin: 0; padding: 6px 10px 8px; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
+  .pip-open {
+    position: absolute; z-index: 3; left: 12px; top: 12px; font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--card); color: var(--ink); box-shadow: 0 4px 14px var(--shade); cursor: pointer;
+  }
+  .pip-tabs button:focus-visible, .pip-icon:focus-visible, .pip-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
   /* ---- a demo, and its loading bar */
   #demo { display: none; flex: 1; position: relative; min-height: 0; }
   body.in-demo #demo { display: block; }
@@ -160,6 +188,8 @@
   }
   @media (max-width: 560px) {
     body.in-demo .mark { display: none; }
+    .pip { width: min(250px, 66vw); left: 8px; top: 8px; }
+    .pip-note { display: none; }
     nav { justify-content: space-between; }
     nav button { flex: 1; justify-content: center; }
   }
@@ -178,7 +208,7 @@
 </header>
 <section id="home">
   <div class="topbar">
-    <h1>Robot Sim Studio (RSS) <span class="sub">Real2Sim case studies</span></h1>
+    <h1>Robot Sim Studio (RSS) <span class="sub">– Real2Sim case studies</span></h1>
     <div class="logos">
       <a href="https://autolab.berkeley.edu/" target="_blank" rel="noopener"><img class="autolab" src="logos/autolab.png" alt="AUTOLab"></a>
       <a href="https://www.berkeley.edu/" target="_blank" rel="noopener"><img class="berkeley" src="logos/berkeley.svg" alt="UC Berkeley"></a>
@@ -200,6 +230,16 @@
 </section>
 <main id="demo">
   <iframe id="frame" title="Live simulation" allow="fullscreen; clipboard-write"></iframe>
+  <aside class="pip" id="pip" aria-label="About this case study" hidden>
+    <div class="pip-head">
+      <div class="pip-tabs" id="piptabs" role="tablist"></div>
+      <button class="pip-icon" id="pipsize" type="button" aria-label="Enlarge the video" title="Enlarge">&#x2922;</button>
+      <button class="pip-icon" id="pipclose" type="button" aria-label="Hide" title="Hide">&times;</button>
+    </div>
+    <video id="pipvideo" muted loop playsinline preload="metadata"></video>
+    <p class="pip-note" id="pipnote"></p>
+  </aside>
+  <button class="pip-open" id="pipopen" type="button" hidden>&#9654;&nbsp; Real robot &amp; generation</button>
   <div class="loading" id="loading" aria-live="polite">
     <div class="box">
       <h2 id="ltitle">Loading</h2>
@@ -214,7 +254,12 @@
   // Its loading bar waits for the demo's own "ready": the page sends it once the scene has reached this browser.
   const DEMOS = [
     { id: "bar", title: "Wipe the bar", short: "Wipe",
-      what: "Press a foam sponge onto a chrome bar and wipe the marker off; the page shows its force and pressure." },
+      what: "Press a foam sponge onto a chrome bar and wipe the marker off; the page shows its force and pressure.",
+      pip: [
+        { label: "Real robot", src: "video/bar_real", note: "The real task this case study recreates: a robot wiping marker off a bar (2× speed)." },
+        { label: "Generation", src: "video/bar_gen",
+          note: "A coding agent building this simulation in RoboSimStudio: about an hour of work, sped up." },
+      ] },
     { id: "cable", title: "Route the cable", short: "Cable", what: "Lift a cable off the bench and lay it into three clips." },
     { id: "towel", title: "Fold the towel", short: "Towel", what: "Lift a towel by its edge and fold it over; a slider sets how soft it is." },
     { id: "peel", title: "Peel the film", short: "Peel", what: "Pull the protective film off a phone, one adhesive bond at a time." },
@@ -276,14 +321,58 @@
     stage = "ready"; target = MARKS.ready; readyAt = performance.now(); lmsg.textContent = "Ready";
   });
 
+  // ---- a demo's corner card: its clips as tabs; click the video to enlarge it; hidden stays hidden for that demo
+  const pip = document.getElementById("pip"), piptabs = document.getElementById("piptabs"), pipvideo = document.getElementById("pipvideo");
+  const pipnote = document.getElementById("pipnote"), pipopen = document.getElementById("pipopen");
+  const pipHidden = {};
+  let pipFor = null;
+  function pipPick(d, i) {
+    const c = d.pip[i];
+    for (const [k, b] of [...piptabs.children].entries()) b.setAttribute("aria-selected", String(k === i));
+    if (pipvideo.dataset.src !== c.src) {
+      pipvideo.dataset.src = c.src;
+      pipvideo.poster = `${c.src}.jpg`;
+      pipvideo.src = `${c.src}.mp4`;
+    }
+    pipnote.textContent = c.note;
+    pipvideo.play().catch(() => {});
+  }
+  function pipShow(d) {
+    const has = !!(d && d.pip);
+    pip.hidden = !has || !!pipHidden[d.id];
+    pipopen.hidden = !has || !pipHidden[d.id];
+    if (!has || pip.hidden) { pipvideo.pause(); return; }
+    if (pipFor !== d.id) {
+      pipFor = d.id;
+      piptabs.replaceChildren(...d.pip.map((c, i) => {
+        const b = document.createElement("button");
+        b.type = "button"; b.setAttribute("role", "tab"); b.textContent = c.label;
+        b.addEventListener("click", () => pipPick(d, i));
+        return b;
+      }));
+      pipPick(d, 0);
+    } else {
+      pipvideo.play().catch(() => {});
+    }
+  }
+  const toggleBig = () => {
+    pip.classList.toggle("big");
+    document.getElementById("pipsize").setAttribute("aria-label", pip.classList.contains("big") ? "Shrink the video" : "Enlarge the video");
+  };
+  pipvideo.addEventListener("click", toggleBig);
+  document.getElementById("pipsize").addEventListener("click", toggleBig);
+  document.getElementById("pipclose").addEventListener("click", () => { const d = current(); if (d) { pipHidden[d.id] = true; pipShow(d); } });
+  pipopen.addEventListener("click", () => { const d = current(); if (d) { pipHidden[d.id] = false; pipShow(d); } });
+
   // ---- routing: no hash is the navigation page, #<id> a demo
   function current() { return DEMOS.find((d) => d.id === location.hash.slice(1)) || null; }
   function show() {
     const d = current();
     document.body.classList.toggle("in-demo", !!d);
     for (const v of videos) { if (d) v.pause(); else v.play().catch(() => {}); }
+    pipShow(d);
     if (!d) {  // back on the navigation page: let go of the demo (no hidden stream, no held driver's seat)
-      document.title = "Robot Sim Studio (RSS) Real2Sim case studies";
+      document.title = "Robot Sim Studio (RSS) – Real2Sim case studies";
       if (frame.dataset.src) { frame.dataset.src = ""; frame.src = "about:blank"; stage = "off"; }
       return;
     }
