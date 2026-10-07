@@ -17,8 +17,7 @@ TASKS=(
   "cable 4 8105"
 )
 mkdir -p "$RSW_LIVE"/{gw,www,logs,run}
-cp "$LIVE/www/index.html" "$RSW_LIVE/www/index.html"
-mkdir -p "$RSW_LIVE/www/logos" && cp "$LIVE/www/logos/"* "$RSW_LIVE/www/logos/"
+cp -r "$LIVE/www/." "$RSW_LIVE/www/"  # the page, its script, styles, fonts and logos (videos live only in $RSW_LIVE/www/video)
 
 alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 

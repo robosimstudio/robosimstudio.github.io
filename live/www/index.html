@@ -4,403 +4,347 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Robot Sim Studio (RSS) – Real2Sim case studies</title>
-<meta name="description" content="Real2Sim case studies from Robot Sim Studio (RSS), simulated live on GPUs: drag the robot and feel the physics.">
-<style>
-  :root {
-    --bar: #ffffff; --ink: #18181b; --muted: #62626a; --line: #e4e4e0; --tab-on: #18181b; --tab-on-ink: #ffffff;
-    --accent: #ff8c00; --live: #16a34a; --wait: #a1a1aa; --stage: #e9e9e6; --page: #f4f4f2; --card: #ffffff;
-    --shade: rgba(24, 24, 27, 0.10);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) {
-      --bar: #141416; --ink: #ececee; --muted: #a1a1aa; --line: #2a2a2f; --tab-on: #ececee; --tab-on-ink: #141416;
-      --stage: #1b1b1e; --page: #111113; --card: #1b1b1e; --shade: rgba(0, 0, 0, 0.45);
-    }
-  }
-  :root[data-theme="dark"] {
-    --bar: #141416; --ink: #ececee; --muted: #a1a1aa; --line: #2a2a2f; --tab-on: #ececee; --tab-on-ink: #141416;
-    --stage: #1b1b1e; --page: #111113; --card: #1b1b1e; --shade: rgba(0, 0, 0, 0.45);
-  }
-  * { box-sizing: border-box; }
-  html, body { height: 100%; margin: 0; }
-  body {
-    display: flex; flex-direction: column; background: var(--page); color: var(--ink);
-    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  }
-  body.in-demo { overflow: hidden; background: var(--stage); }
-  header {
-    flex: none; display: flex; align-items: center; gap: 12px; padding: 8px 16px;
-    padding-top: max(8px, env(safe-area-inset-top)); background: var(--bar); border-bottom: 1px solid var(--line);
-  }
-  .mark { font-weight: 700; white-space: nowrap; letter-spacing: -0.01em; color: inherit; text-decoration: none; }
-  .mark span { color: var(--accent); }
-  .back {
-    display: none; white-space: nowrap; color: var(--ink); text-decoration: none; padding: 6px 10px;
-    border-radius: 999px; border: 1px solid var(--line);
-  }
-  body.in-demo .back { display: inline-block; }
-  nav { display: none; gap: 6px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
-  body.in-demo nav { display: flex; }
-  nav::-webkit-scrollbar { display: none; }
-  nav button {
-    flex: none; display: inline-flex; align-items: center; gap: 7px; padding: 6px 12px; border-radius: 999px;
-    border: 1px solid var(--line); background: transparent; color: var(--ink); font: inherit; cursor: pointer;
-  }
-  nav button:hover { border-color: var(--muted); }
-  nav button[aria-selected="true"] { background: var(--tab-on); border-color: var(--tab-on); color: var(--tab-on-ink); }
-  nav button:focus-visible, .card:focus-visible, .back:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wait); flex: none; }
-  .dot.live { background: var(--live); }
-  .short { display: none; }
-
-  /* ---- the navigation page: the four clips fill the window as its background, the words in the middle */
-  body:not(.in-demo) header { display: none; }
-  #home { flex: 1; min-height: 0; overflow: hidden; background: #0d0d0f; display: flex; flex-direction: column; }
-  body.in-demo #home { display: none; }
-  /* the title across the top, the affiliations' logos on a white strip at its end (they are drawn for white) */
-  .topbar {
-    flex: none; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px 24px;
-    padding: 10px 20px; padding-top: max(10px, env(safe-area-inset-top)); background: var(--bar);
-    border-bottom: 1px solid var(--line); position: relative; z-index: 4;
-  }
-  .topbar h1 { margin: 0; font-size: clamp(18px, 1.9vw, 23px); line-height: 1.2; letter-spacing: -0.01em; font-weight: 700; text-wrap: balance; }
-  .topbar h1 .sub { font-weight: 500; color: var(--muted); }
-  .logos { display: flex; align-items: center; gap: 20px; background: #ffffff; padding: 6px 12px; border-radius: 8px; }
-  .logos a { display: block; line-height: 0; }
-  .logos img { display: block; width: auto; }
-  .logos .autolab { height: 26px; }
-  .logos .berkeley { height: 30px; }
-  .logos .nvidia { height: 24px; }
-  .stage { position: relative; flex: 1; min-height: 0; }
-  .grid { position: absolute; inset: 0; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3px; }
-  .card {
-    position: relative; overflow: hidden; border: 0; padding: 0; margin: 0; cursor: pointer; background: #27272a;
-    font: inherit; color: #fff; text-align: left;
-  }
-  .card video {
-    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; display: block;
-    filter: brightness(0.9); transition: transform 0.5s ease, filter 0.3s ease;
-  }
-  .card:hover video, .card:focus-visible video { transform: scale(1.03); filter: brightness(1.05); }
-  /* each tile's label in its outer corner, clear of the words in the middle, on a soft shade */
-  .card::before {
-    content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
-    background: radial-gradient(ellipse at var(--corner), rgba(0, 0, 0, 0.55), transparent 55%);
-  }
-  .card:nth-child(1) { --corner: 0% 0%; }
-  .card:nth-child(2) { --corner: 100% 0%; }
-  .card:nth-child(3) { --corner: 0% 100%; }
-  .card:nth-child(4) { --corner: 100% 100%; }
-  .card .body {
-    position: absolute; z-index: 2; display: flex; flex-direction: column; gap: 2px; padding: 16px 20px;
-    max-width: min(360px, 80%); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
-  }
-  .card:nth-child(1) .body { top: 0; left: 0; }
-  .card:nth-child(2) .body { top: 0; right: 0; text-align: right; align-items: flex-end; }
-  .card:nth-child(3) .body { bottom: 0; left: 0; }
-  .card:nth-child(4) .body { bottom: 0; right: 0; text-align: right; align-items: flex-end; }
-  .card .title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 21px; }
-  .card .what { font-size: 14px; opacity: 0.95; }
-  .card .go { font-weight: 700; font-size: 14px; color: #ffb35c; }
-  .intro {
-    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3;
-    width: min(500px, calc(100% - 32px)); padding: 22px 26px; border-radius: 16px; color: var(--ink);
-    background: color-mix(in srgb, var(--card) 90%, transparent); backdrop-filter: blur(10px);
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
-  }
-  .intro h2 { font-size: clamp(22px, 2.6vw, 28px); line-height: 1.15; margin: 0 0 8px; letter-spacing: -0.01em; text-wrap: balance; }
-  .intro h2 span { color: var(--accent); }
-  .intro p { margin: 0 0 12px; color: var(--muted); }
-  .how { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; color: var(--ink); font-size: 14px; }
-  .how li { display: flex; gap: 8px; align-items: baseline; }
-  .how b { color: var(--accent); font-weight: 700; }
-  .pick { margin: 14px 0 0; font-weight: 600; text-align: center; }
-
-  /* ---- a demo's corner card: the real task, and how the scene was generated */
-  .pip {
-    position: absolute; z-index: 3; left: 12px; top: 12px; width: min(300px, 46vw); background: var(--card); color: var(--ink);
-    border-radius: 12px; overflow: hidden; box-shadow: 0 8px 28px var(--shade), 0 0 0 1px var(--line); transition: width 0.25s ease;
-  }
-  .pip.big { width: min(760px, calc(100% - 24px)); }
-  .pip-head { display: flex; align-items: center; gap: 4px; padding: 6px 4px 6px 8px; }
-  .pip-tabs { display: flex; gap: 4px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
-  .pip-tabs::-webkit-scrollbar { display: none; }
-  .pip-tabs button {
-    flex: none; font: inherit; font-size: 12.5px; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line);
-    background: transparent; color: var(--ink); cursor: pointer; white-space: nowrap;
-  }
-  .pip-tabs button[aria-selected="true"] { background: var(--tab-on); border-color: var(--tab-on); color: var(--tab-on-ink); }
-  .pip-icon {
-    flex: none; width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent;
-    color: var(--muted); font: inherit; font-size: 17px; line-height: 1; cursor: pointer;
-  }
-  .pip-icon:hover { color: var(--ink); background: var(--line); }
-  .pip video { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; cursor: zoom-in; }
-  .pip.big video { cursor: zoom-out; }
-  .pip-note { margin: 0; padding: 6px 10px 8px; font-size: 12.5px; line-height: 1.35; color: var(--muted); }
-  .pip-open {
-    position: absolute; z-index: 3; left: 12px; top: 12px; font: inherit; font-size: 13px; padding: 6px 12px; border-radius: 999px;
-    border: 1px solid var(--line); background: var(--card); color: var(--ink); box-shadow: 0 4px 14px var(--shade); cursor: pointer;
-  }
-  .pip-tabs button:focus-visible, .pip-icon:focus-visible, .pip-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-
-  /* ---- a demo, and its loading bar */
-  #demo { display: none; flex: 1; position: relative; min-height: 0; }
-  body.in-demo #demo { display: block; }
-  iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; background: var(--stage); }
-  .loading {
-    position: absolute; inset: 0; display: grid; place-items: center; background: var(--stage) center / cover no-repeat;
-    transition: opacity 0.45s ease; z-index: 2;
-  }
-  .loading::before { content: ""; position: absolute; inset: 0; background: var(--stage); opacity: 0.55; backdrop-filter: blur(6px); }
-  .loading.done { opacity: 0; pointer-events: none; }
-  .loading .box {
-    position: relative; width: min(360px, calc(100% - 32px)); padding: 18px 20px; border-radius: 12px; background: var(--card);
-    box-shadow: 0 10px 30px var(--shade); text-align: center;
-  }
-  .loading h2 { margin: 0 0 4px; font-size: 18px; }
-  .loading .msg { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
-  .bar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
-  .bar i { display: block; height: 100%; width: 0; background: var(--accent); border-radius: 999px; }
-
-  @media (max-width: 760px) {
-    header { gap: 8px; padding-left: 10px; padding-right: 10px; }
-    .long { display: none; }
-    .short { display: inline; }
-    nav button { padding: 6px 10px; }
-    .card .body { padding: 10px 12px; max-width: 100%; }
-    /* a narrow tile: the name on one line, "Try it live" under it */
-    .card .title { font-size: 15px; gap: 6px; flex-wrap: wrap; white-space: nowrap; }
-    .card:nth-child(2n) .title { justify-content: flex-end; }
-    .card .title .go { flex-basis: 100%; font-size: 12px; }
-    .card .what { display: none; }
-    .intro { padding: 14px 16px; border-radius: 14px; }
-    .intro h2 { font-size: 19px; margin-bottom: 4px; }
-    .topbar { padding: 8px 12px; padding-top: max(8px, env(safe-area-inset-top)); gap: 8px; }
-    .topbar h1 { font-size: 16px; }
-    .logos { gap: 14px; padding: 5px 10px; }
-    .logos .autolab { height: 18px; }
-    .logos .berkeley { height: 21px; }
-    .logos .nvidia { height: 17px; }
-    .intro p { font-size: 13px; margin-bottom: 8px; }
-    .how { font-size: 13px; gap: 5px; }
-    .pick { margin-top: 8px; font-size: 13px; }
-  }
-  @media (max-width: 560px) {
-    body.in-demo .mark { display: none; }
-    .pip { width: min(250px, 66vw); left: 8px; top: 8px; }
-    .pip-note { display: none; }
-    nav { justify-content: space-between; }
-    nav button { flex: 1; justify-content: center; }
-  }
-  @media (max-width: 360px) {
-    header { padding-left: 6px; padding-right: 6px; }
-    nav { gap: 4px; }
-    nav button { padding: 5px 6px; gap: 5px; font-size: 14px; }
-  }
-</style>
+<meta name="description" content="Robot Sim Studio (RSS): interactive multi-physics simulation for robot manipulation, with four real-to-sim case studies running live on GPUs.">
+<link rel="stylesheet" href="site.css">
 </head>
 <body>
-<header>
-  <a class="mark" href="#" aria-label="All demos">Robot Sim Studio <span>(RSS)</span></a>
-  <a class="back" href="#">&larr; All demos</a>
-  <nav id="tabs" role="tablist" aria-label="Demos"></nav>
-</header>
-<section id="home">
-  <div class="topbar">
-    <h1>Robot Sim Studio (RSS) <span class="sub">– Real2Sim case studies</span></h1>
+
+<nav class="toc" aria-label="Sections">
+  <ol>
+    <li><a href="#overview" title="Overview"><span>Overview</span></a></li>
+    <li><a href="#what" title="What RSS is"><span>What RSS is</span></a></li>
+    <li><a href="#how" title="How it works"><span>How it works</span></a></li>
+    <li><a href="#cases" title="Case studies"><span>Case studies</span></a></li>
+    <li><a href="#manual" title="User manual"><span>User manual</span></a></li>
+  </ol>
+</nav>
+
+<header class="hero" id="overview">
+  <div class="collage" aria-hidden="true">
+    <img src="video/bar.jpg" alt=""><img src="video/cable.jpg" alt=""><img src="video/towel.jpg" alt=""><img src="video/peel.jpg" alt="">
+  </div>
+  <div class="wrap">
+    <span class="badge">Live · four simulations on GPUs</span>
+    <div class="title">
+      <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="45.5" y="2.0" width="9.0" height="15.0" rx="3" fill="currentColor"/><rect x="17.0" y="15.0" width="66.0" height="14.5" rx="3" fill="currentColor"/><path d="M34.52,30.00 L34.51,43.09 L24.38,79.01 L23.44,80.00 L19.10,79.92 L18.40,79.00 L8.27,43.09 L8.28,41.36 L16.56,40.79 L16.56,37.73 L26.79,37.73 L26.79,35.59 L24.58,35.59 L24.58,30.00 L28.34,30.00 L28.73,31.23 L28.34,32.29 L31.82,32.29 L31.43,31.23 L31.82,30.00 L34.52,30.00 Z M27.18,48.39 L15.53,48.39 L14.51,49.48 L20.32,71.09 L21.01,72.00 L22.43,71.20 L28.26,50.56 L28.13,49.09 L27.18,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M65.48,30.00 L65.49,43.09 L75.62,79.01 L76.56,80.00 L80.90,79.92 L81.60,79.00 L91.73,43.09 L91.72,41.36 L83.44,40.79 L83.44,37.73 L73.21,37.73 L73.21,35.59 L75.42,35.59 L75.42,30.00 L71.66,30.00 L71.27,31.23 L71.66,32.29 L68.18,32.29 L68.57,31.23 L68.18,30.00 L65.48,30.00 Z M72.82,48.39 L84.47,48.39 L85.49,49.48 L79.68,71.09 L78.99,72.00 L77.57,71.20 L71.74,50.56 L71.87,49.09 L72.82,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M10,93 Q50,71 90,93" fill="none" stroke="#5B3FA6" stroke-width="10.4" stroke-linecap="round"/></svg>
+      <h1>Robot Sim Studio <span class="acr">(RSS)</span></h1>
+    </div>
+    <p class="subtitle">Real2Sim case studies <span>· interactive physics for robot manipulation</span></p>
     <div class="logos">
       <a href="https://autolab.berkeley.edu/" target="_blank" rel="noopener"><img class="autolab" src="logos/autolab.png" alt="AUTOLab"></a>
       <a href="https://www.berkeley.edu/" target="_blank" rel="noopener"><img class="berkeley" src="logos/berkeley.svg" alt="UC Berkeley"></a>
       <a href="https://www.nvidia.com/" target="_blank" rel="noopener"><img class="nvidia" src="logos/nvidia.svg" alt="NVIDIA"></a>
     </div>
+    <div class="links">
+      <a class="pill primary" href="#cases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Try the live demos</a>
+      <a class="pill" href="#how"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>How it works</a>
+      <a class="pill" href="#manual"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h7l3 3v8H3z M10 2.5v3h3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>User manual</a>
+    </div>
   </div>
-  <div class="stage">
-  <div class="intro">
-    <h2>Four case studies, <span>simulated live</span></h2>
-    <ul class="how">
-      <li><b>1</b><span>Drag the <b>robot's hand</b> (on Wipe the bar, the sponge). It follows at its real speed limit.</span></li>
-      <li><b>2</b><span>Drag empty space to turn the view, right-drag or two fingers to pan, scroll or pinch to zoom. <b>Reset view</b> brings the camera back.</span></li>
-      <li><b>3</b><span>One person drives at a time; everyone else watches the same simulation. <b>New&nbsp;&hellip;</b> starts the task over.</span></li>
-    </ul>
-    <p class="pick">Pick a demo to start.</p>
+</header>
+
+<div class="banner" aria-label="The four case studies">
+  <div class="row">
+    <a class="tile" href="#bar"><video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="bar"></i>Wipe the bar</span></a>
+    <a class="tile" href="#cable"><video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="cable"></i>Route the cable</span></a>
+    <a class="tile" href="#towel"><video src="video/towel.mp4" poster="video/towel.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="towel"></i>Fold the towel</span></a>
+    <a class="tile" href="#peel"><video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="peel"></i>Peel the film</span></a>
   </div>
-  <div class="grid" id="grid"></div>
+  <p class="caption"><b>Four case studies, simulated live.</b> Foam pressed on a chrome bar, a cable laid into clips, a towel folded over,
+    a protective film peeled off a phone. Each runs on its own GPU on this server, and these are not recordings: further down, every one
+    is embedded live, and you can take the robot's hand.</p>
+</div>
+
+<section id="tldr">
+  <div class="wrap">
+    <div class="tldr">
+      <h2>TL;DR</h2>
+      <p><b>Robot Sim Studio (RSS)</b> is a toolkit for building interactive physics simulations of robot manipulation on Newton, GPU physics
+        on Warp and CUDA. Rigid parts, cables, cloth and foam share one scene, each on a solver named in data, and anything in it can be
+        grabbed and dragged in a browser while it runs. A live page rebuilds a scene file on every save, so a coding agent can turn a photo
+        or a clip of a real bench into a simulated twin, one save at a time.</p>
+    </div>
   </div>
 </section>
-<main id="demo">
-  <iframe id="frame" title="Live simulation" allow="fullscreen; clipboard-write"></iframe>
-  <aside class="pip" id="pip" aria-label="About this case study" hidden>
-    <div class="pip-head">
-      <div class="pip-tabs" id="piptabs" role="tablist"></div>
-      <button class="pip-icon" id="pipsize" type="button" aria-label="Enlarge the video" title="Enlarge">&#x2922;</button>
-      <button class="pip-icon" id="pipclose" type="button" aria-label="Hide" title="Hide">&times;</button>
-    </div>
-    <video id="pipvideo" muted loop playsinline preload="metadata"></video>
-    <p class="pip-note" id="pipnote"></p>
-  </aside>
-  <button class="pip-open" id="pipopen" type="button" hidden>&#9654;&nbsp; Real robot &amp; generation</button>
-  <div class="loading" id="loading" aria-live="polite">
-    <div class="box">
-      <h2 id="ltitle">Loading</h2>
-      <p class="msg" id="lmsg">Connecting to the simulation&hellip;</p>
-      <div class="bar"><i id="lbar"></i></div>
+
+<section class="band" id="what">
+  <div class="wrap">
+    <h2>What RSS is</h2>
+    <p class="lede">You put things in a place and step it: <code>rss.Scene</code>, <code>scene.add(spec)</code>, <code>scene.build()</code>,
+      <code>sim.run()</code>. RSS is also the import name: <code>import robosimstudio as rss</code>.</p>
+    <div class="grid three">
+      <div class="card"><h3>One way in</h3><p>There is exactly one way to add something, <code>Scene.add(spec)</code>. A new kind, solver or coupler registers from outside the library.</p></div>
+      <div class="card"><h3>Physics stated as data</h3><p>An asset says what it is; an arrangement says which backend serves each domain and how islands couple. What was built is recorded in a manifest.</p></div>
+      <div class="card"><h3>Several engines, one interface</h3><p>Newton's solvers (MuJoCo, VBD, XPBD, Featherstone, kinematic) and host engines co-simulated beside them (SuperDex, Genesis), pose in and wrench out.</p></div>
+      <div class="card"><h3>An interactive studio</h3><p>In the browser: click anything and drag it, drive each arm by a 6-DOF gizmo, tune deformable materials live, record takes and export them.</p></div>
+      <div class="card"><h3>Agent-driven real-to-sim</h3><p>A live page rebuilds <code>scene.py</code> on every save, and <code>./ctl snapshot --beside</code> shows the scene next to the real reference.</p></div>
+      <div class="card"><h3>Tasks as documents</h3><p>A task is a <code>.task</code> file in an extended BDDL that lowers to a <code>TaskSpec</code>; Python can build the same object.</p></div>
     </div>
   </div>
-</main>
-<script>
-  // The navigation page shows the four demos as looping clips; a demo is one live simulation on its own GPU,
-  // served at its own subdomain and shown in the frame below the tabs (the address keeps which: #towel).
-  // Its loading bar waits for the demo's own "ready": the page sends it once the scene has reached this browser.
-  const DEMOS = [
-    { id: "bar", title: "Wipe the bar", short: "Wipe",
-      what: "Press a foam sponge onto a chrome bar and wipe the marker off; the page shows its force and pressure.",
-      pip: [
-        { label: "Real robot", src: "video/bar_real", note: "The real task this case study recreates: a robot wiping marker off a bar (2× speed)." },
-        { label: "Generation", src: "video/bar_gen",
-          note: "A coding agent building this simulation in RoboSimStudio: about an hour of work, sped up." },
-      ] },
-    { id: "cable", title: "Route the cable", short: "Cable", what: "Lift a cable off the bench and lay it into three clips." },
-    { id: "towel", title: "Fold the towel", short: "Towel", what: "Lift a towel by its edge and fold it over; a slider sets how soft it is." },
-    { id: "peel", title: "Peel the film", short: "Peel", what: "Pull the protective film off a phone, one adhesive bond at a time." },
-  ];
-  const HOST = /sslip\.io$/.test(location.hostname) ? location.hostname : "95-133-252-186.sslip.io";
-  const url = (d) => `https://${d.id}.${HOST}/`;
-  const tabs = document.getElementById("tabs"), grid = document.getElementById("grid");
-  const frame = document.getElementById("frame"), loading = document.getElementById("loading");
-  const lbar = document.getElementById("lbar"), lmsg = document.getElementById("lmsg"), ltitle = document.getElementById("ltitle");
-  const live = {}, misses = {}, videos = [];
+</section>
 
-  for (const d of DEMOS) {
-    const b = document.createElement("button");
-    b.setAttribute("role", "tab");
-    b.dataset.id = d.id;
-    b.innerHTML = `<span class="dot"></span><span class="long">${d.title}</span><span class="short">${d.short}</span>`;
-    b.addEventListener("click", () => { location.hash = d.id; });
-    tabs.appendChild(b);
+<section id="how">
+  <div class="wrap">
+    <h2>How it works</h2>
+    <p class="lede">Every layer reads the same specs, from the scene you declare to the frames you render.</p>
+    <div class="grid three steps">
+      <div class="card"><span class="eyebrow">01 · Declare</span><h3>Specs</h3><p>Frozen dataclasses, written through constructors (<code>rss.box</code>, <code>rss.sheet</code>, <code>rss.rod</code>, <code>rss.sponge</code>, <code>rss.robot</code>) or a <code>.task</code> document.</p></div>
+      <div class="card"><span class="eyebrow">02 · Arrange</span><h3>Physics</h3><p>An arrangement names a backend per domain, a coupler (<code>proxy</code>, <code>admm</code> or <code>one_way</code>), a collision policy and rates.</p></div>
+      <div class="card"><span class="eyebrow">03 · Compose</span><h3>Islands</h3><p>Interaction graph, islands, channels, contact routing, solver, schedule, manifest. Host engines are split out and fed mirrored poses.</p></div>
+      <div class="card"><span class="eyebrow">04 · Step</span><h3>One schedule</h3><p>One substep schedule over the composed solver, captured into a CUDA graph on Newton and Warp.</p></div>
+      <div class="card"><span class="eyebrow">05 · Watch</span><h3>View and render</h3><p>The studio in a browser; GL, path-traced RTX, pyrender or offline mp4. A path-traced re-render replays recorded state, and nothing is re-simulated.</p></div>
+      <div class="card"><span class="eyebrow">06 · Drive</span><h3>Policies and data</h3><p>An environment driven by a scripted routine, a graph policy or a VLA over a socket; episodes, video and LeRobot export.</p></div>
+    </div>
+  </div>
+</section>
 
-    const c = document.createElement("button");
-    c.className = "card";
-    c.dataset.id = d.id;
-    c.innerHTML = `<video src="video/${d.id}.mp4" poster="video/${d.id}.jpg" muted loop playsinline autoplay preload="auto"></video>
-      <span class="body"><span class="title"><span class="dot"></span>${d.title}<span class="go">Try it live &rarr;</span></span>
-      <span class="what">${d.what}</span></span>`;
-    c.addEventListener("click", () => { location.hash = d.id; });
-    grid.appendChild(c);
-    videos.push(c.querySelector("video"));
-  }
+<section class="band" id="cases">
+  <div class="wrap">
+    <h2>Case studies</h2>
+    <p class="lede">Each demo below is the live simulation, embedded. Press <b>Drive the robot</b> to take the robot's hand; until then the
+      page scrolls past it. One person drives at a time and everyone else watches the same simulation. On a phone the demo opens full
+      screen.</p>
+  </div>
 
-  // ---- the loading bar: creeps toward each stage's mark, fills on "ready", then fades
-  let stage = "off", shown = 0, target = 0, last = 0, readyAt = 0, openedAt = 0;
-  const MARKS = { page: 0.45, scene: 0.9, ready: 1 };
-  function step(now) {
-    const dt = Math.min(0.1, (now - (last || now)) / 1000);
-    last = now;
-    if (stage !== "off") {
-      shown += (target - shown) * Math.min(1, dt * (stage === "ready" ? 12 : 1.6));
-      lbar.style.width = `${(100 * shown).toFixed(1)}%`;
-      if (stage === "ready" && now - readyAt > 450) { loading.classList.add("done"); stage = "off"; }
-      else if (stage !== "ready" && now - openedAt > 20000) lmsg.textContent = "Still starting up; this simulation may be restarting.";
-    }
-    requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-  function startLoading(d) {
-    stage = "page"; shown = 0; target = MARKS.page; openedAt = performance.now();
-    lbar.style.width = "0%";
-    ltitle.textContent = d.title;
-    lmsg.textContent = "Connecting to the simulation…";
-    loading.style.backgroundImage = `url(video/${d.id}.jpg)`;
-    loading.classList.remove("done");
-  }
-  frame.addEventListener("load", () => {
-    if (stage === "page") { stage = "scene"; target = MARKS.scene; lmsg.textContent = "Loading the scene…"; }
-  });
-  addEventListener("message", (e) => {
-    if (e.source !== frame.contentWindow || !e.data || e.data.rsw !== "ready" || stage === "off" || stage === "ready") return;
-    stage = "ready"; target = MARKS.ready; readyAt = performance.now(); lmsg.textContent = "Ready";
-  });
+  <article class="case" id="bar">
+    <div class="wrap case-head">
+      <span class="eyebrow">Case study 1 · Contact-rich wiping</span>
+      <h3>Wipe the bar</h3>
+      <p>A chrome grab bar bolted into two black blocks, a blue marker stripe along its crown, and a kitchen sponge. The right arm presses
+        and wipes while the left arm steadies the bar. The stripe comes off through a removal field fed by the sponge's own contact patch,
+        so only real pressure cleans. The scene is the twin of a real clip, rebuilt by a coding agent.</p>
+      <div class="facts"><span>Bimanual i2rt YAM</span><span>Arms and bar: Newton (MuJoCo)</span><span>Sponge: SuperDex FEM foam</span><span>Twin of a real clip</span></div>
+    </div>
+    <div class="wide stagewrap">
+      <div class="live" data-id="bar" data-title="Wipe the bar">
+        <div class="screen">
+          <video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video>
+          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+        </div>
+        <div class="tools"><i class="dot" data-status="bar"></i><span class="note">Live simulation</span><span class="spacer"></span>
+          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
+      </div>
+      <aside class="how">
+        <h4>How to drive</h4>
+        <ul>
+          <li><b>Sponge</b><span>Drag it down to press it onto the bar, sideways to wipe.</span></li>
+          <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
+          <li><b>Buttons</b><span><i>New stripe</i> re-inks the bar; <i>Reset view</i> brings the camera back.</span></li>
+        </ul>
+        <p class="task">Wipe the blue stripe off. The panel shows the press force and the peak contact pressure.</p>
+      </aside>
+    </div>
+    <div class="wrap pair">
+      <figure>
+        <video src="video/bar_real.mp4" poster="video/bar_real.jpg" muted loop playsinline autoplay preload="metadata"></video>
+        <figcaption><b>The real task.</b> The robot clip this case study recreates (2× speed).</figcaption>
+      </figure>
+      <figure>
+        <video src="video/bar_gen.mp4" poster="video/bar_gen.jpg" muted loop playsinline autoplay preload="metadata"></video>
+        <figcaption><b>How it was generated.</b> A coding agent building this scene in RSS's live page, about an hour of work sped up:
+          the arms, the bench, the lab, then the photo camera matched to the clip.</figcaption>
+      </figure>
+    </div>
+  </article>
 
-  // ---- a demo's corner card: its clips as tabs; click the video to enlarge it; hidden stays hidden for that demo
-  const pip = document.getElementById("pip"), piptabs = document.getElementById("piptabs"), pipvideo = document.getElementById("pipvideo");
-  const pipnote = document.getElementById("pipnote"), pipopen = document.getElementById("pipopen");
-  const pipHidden = {};
-  let pipFor = null;
-  function pipPick(d, i) {
-    const c = d.pip[i];
-    for (const [k, b] of [...piptabs.children].entries()) b.setAttribute("aria-selected", String(k === i));
-    if (pipvideo.dataset.src !== c.src) {
-      pipvideo.dataset.src = c.src;
-      pipvideo.poster = `${c.src}.jpg`;
-      pipvideo.src = `${c.src}.mp4`;
-    }
-    pipnote.textContent = c.note;
-    pipvideo.play().catch(() => {});
-  }
-  function pipShow(d) {
-    const has = !!(d && d.pip);
-    pip.hidden = !has || !!pipHidden[d.id];
-    pipopen.hidden = !has || !pipHidden[d.id];
-    if (!has || pip.hidden) { pipvideo.pause(); return; }
-    if (pipFor !== d.id) {
-      pipFor = d.id;
-      piptabs.replaceChildren(...d.pip.map((c, i) => {
-        const b = document.createElement("button");
-        b.type = "button"; b.setAttribute("role", "tab"); b.textContent = c.label;
-        b.addEventListener("click", () => pipPick(d, i));
-        return b;
-      }));
-      pipPick(d, 0);
-    } else {
-      pipvideo.play().catch(() => {});
-    }
-  }
-  const toggleBig = () => {
-    pip.classList.toggle("big");
-    document.getElementById("pipsize").setAttribute("aria-label", pip.classList.contains("big") ? "Shrink the video" : "Enlarge the video");
-  };
-  pipvideo.addEventListener("click", toggleBig);
-  document.getElementById("pipsize").addEventListener("click", toggleBig);
-  document.getElementById("pipclose").addEventListener("click", () => { const d = current(); if (d) { pipHidden[d.id] = true; pipShow(d); } });
-  pipopen.addEventListener("click", () => { const d = current(); if (d) { pipHidden[d.id] = false; pipShow(d); } });
+  <article class="case" id="cable">
+    <div class="wrap case-head">
+      <span class="eyebrow">Case study 2 · Cable routing</span>
+      <h3>Route the cable</h3>
+      <p>A 45 cm, 5 mm cable runs from a socket; lay it into three Y-prong clips. The cable is SuperDex's Cosserat rod, and every rigid shape it
+        can touch is mirrored into SuperDex, so the cable feels the arm, the bench and the clips that Newton simulates. The hand holds the
+        cable's end with node constraints re-aimed every substep.</p>
+      <div class="facts"><span>Franka Panda</span><span>Cable: SuperDex Cosserat rod</span><span>Arm, bench, clips: Newton (MuJoCo)</span></div>
+    </div>
+    <div class="wide stagewrap">
+      <div class="live" data-id="cable" data-title="Route the cable">
+        <div class="screen">
+          <video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video>
+          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+        </div>
+        <div class="tools"><i class="dot" data-status="cable"></i><span class="note">Live simulation</span><span class="spacer"></span>
+          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
+      </div>
+      <aside class="how">
+        <h4>How to drive</h4>
+        <ul>
+          <li><b>Hand</b><span>Drag it: up lifts the cable, sideways carries it along the clips.</span></li>
+          <li><b>Shadow</b><span>Drag the hand's shadow on the bench to move it in or out.</span></li>
+          <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
+          <li><b>Buttons</b><span><i>New cable</i> starts over; <i>Reset view</i> brings the camera back.</span></li>
+        </ul>
+        <p class="task">Lay the cable into all three clips.</p>
+      </aside>
+    </div>
+  </article>
 
-  // ---- routing: no hash is the navigation page, #<id> a demo
-  function current() { return DEMOS.find((d) => d.id === location.hash.slice(1)) || null; }
-  function show() {
-    const d = current();
-    document.body.classList.toggle("in-demo", !!d);
-    for (const v of videos) { if (d) v.pause(); else v.play().catch(() => {}); }
-    pipShow(d);
-    if (!d) {  // back on the navigation page: let go of the demo (no hidden stream, no held driver's seat)
-      document.title = "Robot Sim Studio (RSS) – Real2Sim case studies";
-      if (frame.dataset.src) { frame.dataset.src = ""; frame.src = "about:blank"; stage = "off"; }
-      return;
-    }
-    for (const b of tabs.children) b.setAttribute("aria-selected", String(b.dataset.id === d.id));
-    tabs.querySelector(`[data-id="${d.id}"]`).scrollIntoView({ block: "nearest", inline: "nearest" });
-    if (frame.dataset.src !== url(d)) {
-      frame.dataset.src = url(d);
-      startLoading(d);
-      frame.src = url(d);
-    }
-    document.title = `${d.title} · Robot Sim Studio (RSS)`;
-  }
+  <article class="case" id="towel">
+    <div class="wrap case-head">
+      <span class="eyebrow">Case study 3 · Cloth folding</span>
+      <h3>Fold the towel</h3>
+      <p>A terry towel simulated with VBD and self-contact. The robot takes the towel's edge by itself, then hands it to you: lift the edge,
+        carry it over, fold it in half. Only the patch under the fingers is held; the rest of the cloth drapes, slides and bunches on its own.
+        The task scores after SoftGym's ClothFold.</p>
+      <div class="facts"><span>YAM pair</span><span>Towel: Newton VBD, self-contact</span><span>Arms: Newton (MuJoCo)</span><span>Softness slider</span></div>
+    </div>
+    <div class="wide stagewrap">
+      <div class="live" data-id="towel" data-title="Fold the towel">
+        <div class="screen">
+          <video src="video/towel.mp4" poster="video/towel.jpg" muted loop playsinline autoplay></video>
+          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+        </div>
+        <div class="tools"><i class="dot" data-status="towel"></i><span class="note">Live simulation</span><span class="spacer"></span>
+          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
+      </div>
+      <aside class="how">
+        <h4>How to drive</h4>
+        <ul>
+          <li><b>Hand</b><span>Drag it: up lifts the towel's edge, sideways carries it over.</span></li>
+          <li><b>Softness</b><span>The slider in the panel runs from canvas to silk.</span></li>
+          <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
+          <li><b>Buttons</b><span><i>New towel</i> starts over; <i>Reset view</i> brings the camera back.</span></li>
+        </ul>
+        <p class="task">Fold the towel in half.</p>
+      </aside>
+    </div>
+  </article>
 
-  // Which simulations answer: the gateway's status route says 204 (up) or 502 (down or restarting).
-  async function poll() {
-    await Promise.all(DEMOS.map(async (d) => {
-      let ok = false;
-      try { ok = (await fetch(`https://${HOST}/status/${d.id}`, { cache: "no-store" })).ok; } catch (e) { ok = false; }
-      misses[d.id] = ok ? 0 : (misses[d.id] || 0) + 1;
-      live[d.id] = misses[d.id] < 2;
-      for (const el of document.querySelectorAll(`[data-id="${d.id}"] .dot`)) el.classList.toggle("live", ok);
-    }));
-  }
+  <article class="case" id="peel">
+    <div class="wrap case-head">
+      <span class="eyebrow">Case study 4 · Adhesive peeling</span>
+      <h3>Peel the film</h3>
+      <p>The protective film on a phone, held down by a field of adhesive bonds after AutoPeel (ICRA 2025). The left hand holds the phone;
+        the right has the film's tab and pulls it along the peel arc. Each bond lets go when it is stretched past its limit, one row at a
+        time.</p>
+      <div class="facts"><span>Bimanual i2rt YAM</span><span>Film: Newton VBD cloth</span><span>Arms: Newton (MuJoCo), one-way coupled</span></div>
+    </div>
+    <div class="wide stagewrap">
+      <div class="live" data-id="peel" data-title="Peel the film">
+        <div class="screen">
+          <video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video>
+          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+        </div>
+        <div class="tools"><i class="dot" data-status="peel"></i><span class="note">Live simulation</span><span class="spacer"></span>
+          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
+      </div>
+      <aside class="how">
+        <h4>How to drive</h4>
+        <ul>
+          <li><b>Hand</b><span>Drag it down the phone's face to peel the film off. It plays in slow motion.</span></li>
+          <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
+          <li><b>Buttons</b><span><i>New film</i> lays a fresh film; <i>Reset view</i> brings the camera back.</span></li>
+        </ul>
+        <p class="task">Peel the whole film off. The panel's map shows each bond as it stretches and breaks.</p>
+      </aside>
+    </div>
+  </article>
+</section>
 
-  addEventListener("hashchange", show);
-  show();
-  poll();
-  setInterval(poll, 20000);
-</script>
+<section id="manual">
+  <div class="wrap manual">
+    <h2>User manual</h2>
+    <p class="lede">The essentials, from the RoboSimStudio repository's README and docs. RSS is work in progress, and its code is not public yet.</p>
+
+    <h3>Requirements</h3>
+    <p>An NVIDIA GPU with a driver new enough for the CUDA runtime that Warp ships, and <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a>.
+      Optional extras: <code>[studio]</code> (the browser studio), <code>[bench]</code> (tasks and policies), <code>[rtx]</code> (the path tracer) and
+      <code>[superdex]</code> (Python 3.12).</p>
+
+    <h3>Install and open a first scene</h3>
+    <div class="code"><button class="copy" type="button" data-copy="c-install">Copy</button><pre id="c-install">git clone https://github.com/KeplerC/robosimstudio.git
+cd robosimstudio
+uv run -m examples.scenes.rigid                            # two arms and three shapes; click and drag any of them
+uv run python scripts/studio.py --task tool_sort/level2_1  # the studio on a task</pre>
+      <span class="src">Each prints a share URL; <code>--no-share</code> keeps it local. The first run builds the environment (about a minute), then Warp's kernel cache.</span></div>
+
+    <h3>Put things in a place and step it</h3>
+    <div class="code"><button class="copy" type="button" data-copy="c-hello">Copy</button><pre id="c-hello">import robosimstudio as rss
+
+scene = rss.Scene(cell="bench_075")
+cube  = scene.add(rss.box(name="cube", half=(0.025,) * 3, at=(0, 0, 0.2)))
+scene.add(rss.robot("panda"))
+
+sim = scene.build()
+sim.run(150).sync()
+print(cube.position)        # (0.600, 0.000, 0.775) -- 25 mm above a 750 mm bench
+rss.view(sim)               # ...and drive it in a browser</pre>
+      <span class="src">Swap <code>rss.box</code> for <code>rss.rod</code>, <code>rss.sheet</code> or <code>rss.sponge</code> and you have a rope, a towel, or a block of FEM foam co-simulated by SuperDex.</span></div>
+
+    <h3>Write a scene</h3>
+    <p>Constructors build the specs: <code>rss.sheet(name=, size=, cells=, at=, material=)</code>, <code>rss.rod(...)</code>,
+      <code>rss.RodSpec(nodes=…)</code>, <code>rss.SoftSpec(asset=…)</code>, <code>rss.sponge(...)</code>, <code>rss.robot("panda", at=, arm=, gripper=)</code>.
+      Poses are in the cell's work-surface frame. Change the physics with <code>scene.with_physics(substeps=4)</code>. Nine runnable examples, in reading
+      order: <code>rigid</code>, <code>cable</code>, <code>cloth</code>, <code>cables</code>, <code>engines</code>, <code>sponge</code>, <code>genesis_cloth</code>,
+      <code>ported</code>, <code>custom</code>.</p>
+
+    <h3>Write a task</h3>
+    <div class="code"><button class="copy" type="button" data-copy="c-task">Copy</button><pre id="c-task">(define (problem PICK_UP_THE_HAMMER)
+  (:language pick up the hammer and place it in bin2)
+  (:staging
+    (:scene bench_075)
+    (:embodiment panda)
+    (:control-mode joint_position)
+    (:episodes (:count 1) (:seed 0) (:sampler fixed))
+    (:max-steps 2400)
+  )
+  (:objects hammer_0 - hammer)
+  (:regions
+    (bin2_hammer_region (:target bin2) (:ranges ((-0.195 -0.245 0.0 0.0))))
+  )
+  (:init)
+  (:goal (In hammer_0 bin2_hammer_region))
+)</pre>
+      <span class="src">Build it with <code>uv run python scripts/bench_smoke.py --task &lt;suite&gt;/&lt;variant&gt;</code>, run it with
+        <code>scripts/bench_run.py --task &lt;suite&gt;/&lt;variant&gt; --solve graph --capture-state</code>, and list tasks with <code>--list</code>.</span></div>
+
+    <h3>View and drive</h3>
+    <div class="table"><table>
+      <thead><tr><th>Call</th><th>What it opens</th></tr></thead>
+      <tbody>
+        <tr><td><code>rss.view(sim)</code></td><td>The studio: panels, drag handles, gizmo IK, material tuning, takes. Options include <code>panels="all"</code>, <code>share=False</code>, <code>render_every=4</code>.</td></tr>
+        <tr><td><code>rss.viewer(sim)</code></td><td>A thin viser viewer.</td></tr>
+        <tr><td><code>rss.draw(sim)</code></td><td>The same viewer with the loop written for you.</td></tr>
+        <tr><td><code>scripts/studio.py --task …</code></td><td>The studio on a registered task.</td></tr>
+      </tbody>
+    </table></div>
+
+    <h3>Extend it</h3>
+    <div class="grid two">
+      <div class="card"><h4>A robot</h4><p>An <code>EmbodimentSpec</code> and an optional <code>GripperSpec</code>: two declarations, no code. <code>docs/adding_a_robot.md</code></p></div>
+      <div class="card"><h4>An asset</h4><p>One <code>AssetRecord</code> registered beside its bytes. <code>docs/adding_an_asset.md</code></p></div>
+      <div class="card"><h4>A task</h4><p>A <code>.task</code> document, plus optional <code>staging.py</code>, <code>scenes.py</code> and <code>assets/</code>. <code>docs/adding_a_task.md</code></p></div>
+      <div class="card"><h4>A physics implementation</h4><p>A backend for a domain, registered from outside. <code>docs/adding_a_physics_implementation.md</code></p></div>
+    </div>
+
+    <h3>From real to sim, with an agent</h3>
+    <p>Start the live page, then point a coding agent at it. The procedure lives in the repository (<code>AGENTS.md</code> and the
+      <code>real-to-sim</code> skill), not in the prompt.</p>
+    <div class="code"><button class="copy" type="button" data-copy="c-live">Copy</button><pre id="c-live">cd examples/live
+./ctl up                                  # the page; prints http://localhost:8080 (--share adds a public URL)
+claude --permission-mode acceptEdits      # or: codex -a on-request -s workspace-write</pre>
+      <span class="src">The agent then uses <code>./ctl status</code>, <code>./ctl snapshot --camera &lt;name&gt; --beside ref/&lt;photo&gt;</code>,
+        <code>./ctl catalog robots cells</code>, <code>./ctl eval "sim['&lt;name&gt;'].position"</code> and <code>./ctl run N</code>.
+        A rebuild takes about 6 s, and the swap into the page under 0.1 s.</span></div>
+    <div class="grid four steps">
+      <div class="card"><span class="eyebrow">01</span><h4>Read the reference</h4><p>The surface, the robot, each object, the camera.</p></div>
+      <div class="card"><span class="eyebrow">02</span><h4>One thing per save</h4><p>Cell, robot, objects, camera; after each save, <code>status</code> and <code>snapshot --beside</code>.</p></div>
+      <div class="card"><span class="eyebrow">03</span><h4>Act</h4><p><code>./ctl run 120</code>, or a generator through <code>eval</code>.</p></div>
+      <div class="card"><span class="eyebrow">04</span><h4>Stop</h4><p>When the pair agrees, or say which number the reference cannot settle.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><b>Robot Sim Studio (RSS)</b> · AUTOLab, UC Berkeley · NVIDIA</p>
+    <p>The four demos run live on this server's GPUs, one driver at a time.</p>
+  </div>
+</footer>
+
+<script src="site.js"></script>
 </body>
 </html>
