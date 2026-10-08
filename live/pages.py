@@ -29,15 +29,12 @@ HIDE_VISER_MENU = (
 the panel renders raw HTML, so a style rule does."""
 
 NOTES_LOW = (
-    "<style>.mantine-Notifications-root{top:auto!important;bottom:calc(12px + env(safe-area-inset-bottom))!important}"
-    "@media (max-width:560px){.mantine-Notifications-root{top:196px!important;bottom:auto!important}}</style>"
+    "<style>@media (min-width:561px){.mantine-Notifications-root{top:auto!important;"
+    "bottom:calc(12px + env(safe-area-inset-bottom))!important}}</style>"
 )
-"""viser's pop-ups (the welcome note, "someone else is driving") out of the top-left corner, on pages whose
-front-page frame shows its own card there (:data:`CORNER_CARD`): to the bottom-left, or on a phone (where
-the panel is a sheet along the bottom) just under the card."""
-CORNER_CARD = {"bar"}
-"""Scenes whose demo on the front page has a video card in the top-left corner (the real task, and how the
-scene was generated)."""
+"""viser's pop-ups (the welcome note, "someone else is driving") to the bottom-left corner, off the arms that
+reach in from the top of every opening view (and clear of the project page's Drive button, bottom right). On
+a phone, where the panel is a sheet along the bottom, they stay at the top."""
 
 PANEL_WIDTH = "medium"
 """viser's floating panel width on a desktop (the phone page asks for "small")."""
@@ -323,8 +320,7 @@ def polish(wp) -> None:
         )
         self.phone_widgets["progress"].visible = False  # completion is not shown
         self.server.gui.add_html(HIDE_VISER_MENU, order=1000)
-        if self.scene_kind in CORNER_CARD:
-            self.server.gui.add_html(NOTES_LOW, order=1002)
+        self.server.gui.add_html(NOTES_LOW, order=1002)
         ready_ping(self.server)
         view = wp.VIEWS.get(self.scene_kind)
         if view is not None:  # the opening view, as aim() sets it, for the very first frame
