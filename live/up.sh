@@ -18,6 +18,7 @@ TASKS=(
 )
 mkdir -p "$RSW_LIVE"/{gw,www,logs,run}
 cp -r "$LIVE/www/." "$RSW_LIVE/www/"  # the page, its script, styles, fonts and logos (videos live only in $RSW_LIVE/www/video)
+python3 "$LIVE/stamp.py" "$RSW_LIVE/www"  # every file link carries its content hash: no cache pairs a new page with old files
 
 alive() { [ -f "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
 

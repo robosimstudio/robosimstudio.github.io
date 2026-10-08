@@ -1,4 +1,4 @@
-// The project page's live demos, banner and section bar.
+// The project page's live demos, banner and section menu.
 //
 // Each case study's block (.live[data-id]) embeds that task's viser page from its own subdomain.
 // - It connects only when scrolled into view (a third of it showing), at most MAX_LIVE at once, and
@@ -143,8 +143,8 @@
   poll();
   setInterval(poll, 20000);
 
-  // ---- the section bar marks the section in view (the band a third of the way down the window)
-  const links = new Map([...document.querySelectorAll(".topbar ol a[href^='#']")].map((a) => [a.getAttribute("href").slice(1), a]));
+  // ---- the section menu marks the section in view (the band a third of the way down the window)
+  const links = new Map([...document.querySelectorAll(".sidenav a[href^='#']")].map((a) => [a.getAttribute("href").slice(1), a]));
   const sections = [...links.keys()].map((id) => document.getElementById(id)).filter(Boolean);
   let marked = null;
   function mark() {
@@ -154,7 +154,7 @@
     if (on === marked) return;
     marked = on;
     for (const [id, a] of links) a.classList.toggle("on", id === on.id);
-    const a = links.get(on.id), bar = a.parentElement.parentElement;  // keep it in sight on a narrow bar
+    const a = links.get(on.id), bar = a.parentElement.parentElement;  // keep it in sight on the narrow strip
     if (bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: a.offsetLeft - (bar.clientWidth - a.offsetWidth) / 2, behavior: "smooth" });
   }
   addEventListener("scroll", mark, { passive: true });

@@ -51,6 +51,8 @@
 		import status 8105
 	}
 	handle {
+		# revalidate every time (a 304 when unchanged): a browser once kept an old site.css under a new page
+		header Cache-Control no-cache
 		root * {$RSW_LIVE}/www
 		file_server
 	}
