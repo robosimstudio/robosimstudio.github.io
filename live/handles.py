@@ -59,6 +59,8 @@ FINGER_RADIUS, FINGER_FORWARD = 0.012, 0.07
 LABEL_UP, LABEL_SIDE = 0.07, 0.06
 """The hint's words stand this far over the tool, or to its left [m]."""
 LABEL_SCALE = 1.6
+NO_WORDS = bool(os.environ.get("RSW_REC_NO_WORDS"))
+"""``RSW_REC_NO_WORDS=1``: the hint without its words, for recording the project page's clips."""
 ARROW_HEAD = 0.009
 
 
@@ -501,9 +503,9 @@ class Handle:
                 coach.update(tool_points(wipe)[0], now)
 
     def _probe(self, wipe, now) -> None:
-        """For scripted recordings: where the things one presses are, the hint's path (world metres) and
-        the simulation's clock against the wall's; and ``<probe>.view`` (JSON: position, look_at), when
-        a recording writes one, sets every viewer's camera."""
+        """For scripted recordings: where the things one presses are, the hint's path (world metres),
+        the scene's own cameras and the simulation's clock against the wall's; and ``<probe>.view``
+        (JSON: position, look_at), when a recording writes one, sets every viewer's camera."""
         if not self.probe or now - self.probe_at < 0.2:
             return
         self.probe_at = now
@@ -517,7 +519,10 @@ class Handle:
         make = TASKS.get(type(wipe).__name__.lower())
         legs = [list(leg.to) for leg in make(wipe)[1]] if make else []
         shadow = getattr(self.c, "shadow", None)
-        data = {"wall": time.time(), "sim_time": float(self.session.env.sim_time),
+        rig = getattr(getattr(wipe, "sim", None), "cameras", None) or ()
+        scene_cams = {c.name: {"eye": list(map(float, c.eye)), "look_at": list(map(float, c.look_at)), "fov_y": float(c.fov_y)}
+                      for c in rig if getattr(c, "eye", None) is not None and getattr(c, "look_at", None) is not None}
+        data = {"wall": time.time(), "sim_time": float(self.session.env.sim_time), "scene_cams": scene_cams,
                 "tool": tool_points(wipe)[0].tolist(), "tcp": np.asarray(wipe.tcp()).tolist(), "target": target(wipe).tolist(),
                 "dragging": bool(self.c.dragging), "legs": legs, "cams": cams,
                 "shadow": None if shadow is None else list(map(float, shadow.position))}
@@ -557,7 +562,8 @@ class Coach:
         self.client, self.t0, self.legs, self.beside = client, now, legs, beside
         sc, base = client.scene, f"/phone/coach_{client.client_id}"
         self.label = sc.add_label(f"{base}/label", text, position=(0.0, 0.0, 0.0),
-                                  anchor="center-right" if beside else "bottom-center", font_screen_scale=LABEL_SCALE)
+                                  anchor="center-right" if beside else "bottom-center", font_screen_scale=LABEL_SCALE,
+                                  visible=not NO_WORDS)
         v, f = disc(FINGER_RADIUS)
         self.finger = sc.add_mesh_simple(f"{base}/finger", v, f, color=(255, 255, 255), opacity=0.0, side="double",
                                          cast_shadow=False, receive_shadow=False)

@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Robot Sim Studio (RSS) – Real2Sim case studies</title>
-<meta name="description" content="Robot Sim Studio (RSS): interactive multi-physics simulation for robot manipulation, with four real-to-sim case studies running live on GPUs.">
+<meta name="description" content="Robot Sim Studio (RSS): interactive multi-physics simulation for robot manipulation, with three real-to-sim case studies running live on GPUs.">
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
@@ -14,14 +14,13 @@
     <li><a href="#overview"><span class="dot"></span><span class="lbl">Overview</span></a></li>
     <li><a href="#bar"><span class="dot"></span><span class="lbl">Wipe the bar</span></a></li>
     <li><a href="#cable"><span class="dot"></span><span class="lbl">Route the cable</span></a></li>
-    <li><a href="#towel"><span class="dot"></span><span class="lbl">Fold the towel</span></a></li>
     <li><a href="#peel"><span class="dot"></span><span class="lbl">Peel the film</span></a></li>
   </ul>
 </nav>
 
 <header class="hero" id="overview">
   <div class="collage" aria-hidden="true">
-    <img src="video/bar.jpg" alt=""><img src="video/cable.jpg" alt=""><img src="video/towel.jpg" alt=""><img src="video/peel.jpg" alt="">
+    <img src="video/bar.jpg" alt=""><img src="video/cable.jpg" alt=""><img src="video/peel.jpg" alt="">
   </div>
   <div class="wrap">
     <div class="logos">
@@ -40,12 +39,11 @@
   </div>
 </header>
 
-<div class="banner" aria-label="The four case studies">
+<div class="banner" aria-label="The three case studies">
   <div class="row">
-    <a class="tile" href="#bar"><video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="bar"></i>Wipe the bar</span></a>
-    <a class="tile" href="#cable"><video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="cable"></i>Route the cable</span></a>
-    <a class="tile" href="#towel"><video src="video/towel.mp4" poster="video/towel.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="towel"></i>Fold the towel</span></a>
-    <a class="tile" href="#peel"><video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="peel"></i>Peel the film</span></a>
+    <a class="tile" href="#bar" aria-label="Wipe the bar"><video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video></a>
+    <a class="tile" href="#cable" aria-label="Route the cable"><video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video></a>
+    <a class="tile" href="#peel" aria-label="Peel the film"><video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video></a>
   </div>
 </div>
 
@@ -147,43 +145,9 @@
     </div>
   </article>
 
-  <article class="case" id="towel">
-    <div class="wrap case-head">
-      <span class="eyebrow">Case study 3 · Cloth folding</span>
-      <h3>Fold the towel</h3>
-      <p>A terry towel simulated with VBD and self-contact. The robot takes the towel's edge by itself, then hands it to you: lift the edge,
-        carry it over, fold it in half. Only the patch under the fingers is held; the rest of the cloth drapes, slides and bunches on its own.
-        The task scores after SoftGym's ClothFold.</p>
-      <div class="facts"><span>YAM pair</span><span>Towel: Newton VBD, self-contact</span><span>Arms: Newton (MuJoCo)</span><span>Softness slider</span></div>
-    </div>
-    <div class="wide stagewrap">
-      <div class="live" data-id="towel" data-title="Fold the towel">
-        <div class="screen">
-          <video src="video/towel.mp4" poster="video/towel.jpg" muted loop playsinline autoplay></video>
-          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
-        </div>
-        <div class="tools"><i class="dot" data-status="towel"></i><span class="note">Live simulation</span><span class="spacer"></span>
-          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
-      </div>
-      <aside class="how">
-        <h4>How to drive</h4>
-        <p class="who"><i aria-hidden="true"></i><span>Until you grab it, the robot runs a <b>preprogrammed</b> motion. When you grab the hand
-          and it turns <b>blue</b>, you're driving.</span></p>
-        <ul>
-          <li><b>Hand</b><span>Drag it: up lifts the towel's edge, sideways carries it over.</span></li>
-          <li><b>Softness</b><span>The slider in the panel runs from canvas to silk.</span></li>
-          <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
-          <li><b>Buttons</b><span><i>New towel</i> starts over; <i>Reset view</i> brings the camera back.</span></li>
-        </ul>
-        <p class="task">Fold the towel in half.</p>
-      </aside>
-    </div>
-  </article>
-
   <article class="case" id="peel">
     <div class="wrap case-head">
-      <span class="eyebrow">Case study 4 · Adhesive peeling</span>
+      <span class="eyebrow">Case study 3 · Adhesive peeling</span>
       <h3>Peel the film</h3>
       <p>The protective film on a phone, held down by a field of adhesive bonds after AutoPeel (ICRA 2025). The left hand holds the phone;
         the right has the film's tab and pulls it along the peel arc. Each bond lets go when it is stretched past its limit, one row at a
@@ -218,7 +182,7 @@
 <footer>
   <div class="wrap">
     <p><b>Robot Sim Studio (RSS)</b> · AUTOLab, UC Berkeley · NVIDIA</p>
-    <p>The four demos run live on this server's GPUs, one driver at a time.</p>
+    <p>The three demos run live on this server's GPUs, one driver at a time.</p>
   </div>
 </footer>
 

@@ -34,8 +34,9 @@ HIDE = """div:has(> [data-testid="floating-panel-handle"]), .mantine-Notificatio
 VIEWS = {
     # task: (look_at offset from the tool [m, world], along the hint's gesture (k, i, j): k * (leg j - leg i),
     #        leg -1 = where the finger lands, distance from the look_at point [m], and the view's direction:
-    #        None = the page's own, or (leg, elevation, yaw) [deg] = from where that leg of the gesture heads)
-    "bar": ((0.0, 0.0, -0.03), None, 0.40, None),
+    #        None = the page's own, "<name>" = the scene's camera of that name (the bar's "photo" is the one
+    #        matched to the real clip), or (leg, elevation, yaw) [deg] = from where that leg of the gesture heads)
+    "bar": ((0.0, 0.0, -0.02), None, 0.24, "photo"),  # the real clip's angle, close on the sponge
     "peel": ((0.0, 0.0, -0.01), (0.9, -1, 0), 0.30, (0, 40.0, 0.0)),  # from beyond the far end: the clear film lifts toward the camera
     "towel": ((0.0, 0.0, -0.05), (1.2, 0, 1), 0.42, None),
     "cable": ((0.0, -0.15, -0.03), None, 0.40, None),
@@ -185,6 +186,11 @@ def frame_view(page, cast):
         look = look + k * (legs[j + 1] - legs[i + 1])
     if heading is None:
         back = eye0 - look0
+    elif isinstance(heading, str):
+        cam = d.get("scene_cams", {}).get(heading)
+        if cam is None:
+            raise SystemExit(f"the scene has no camera {heading!r} (has: {sorted(d.get('scene_cams', {}))})")
+        back = np.asarray(cam["eye"], dtype=float) - np.asarray(cam["look_at"], dtype=float)
     else:
         leg, elev, yaw = heading
         h = legs[leg + 1] - legs[leg]
