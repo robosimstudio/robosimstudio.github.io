@@ -61,6 +61,10 @@ LABEL_UP, LABEL_SIDE = 0.07, 0.06
 LABEL_SCALE = 1.6
 NO_WORDS = bool(os.environ.get("RSW_REC_NO_WORDS"))
 """``RSW_REC_NO_WORDS=1``: the hint without its words, for recording the project page's clips."""
+NARROW_PX = 600
+"""A viewer in portrait (a phone), or narrower than this, gets the hint without its words: at the label's
+screen scale they ran off the screen's edge, and the page's welcome card says the same. (viser reports the
+canvas in device pixels, so a phone's width alone reads 1170 for 390 CSS px: portrait is the test.)"""
 ARROW_HEAD = 0.009
 
 
@@ -554,6 +558,14 @@ class Handle:
             self.view_seen[cid] = stamp
 
 
+def _narrow(client) -> bool:
+    try:
+        w, h = float(client.camera.image_width), float(client.camera.image_height)
+        return 0 < w < NARROW_PX or 0 < w < h
+    except Exception:  # noqa: BLE001 -- no camera reported yet: words on
+        return False
+
+
 class Coach:
     """One viewer's hint: the words over the tool and a finger acting the drag out over its path drawn as
     arrows. Nodes on that viewer's own scene only."""
@@ -563,7 +575,7 @@ class Coach:
         sc, base = client.scene, f"/phone/coach_{client.client_id}"
         self.label = sc.add_label(f"{base}/label", text, position=(0.0, 0.0, 0.0),
                                   anchor="center-right" if beside else "bottom-center", font_screen_scale=LABEL_SCALE,
-                                  visible=not NO_WORDS)
+                                  visible=not NO_WORDS and not _narrow(client))
         v, f = disc(FINGER_RADIUS)
         self.finger = sc.add_mesh_simple(f"{base}/finger", v, f, color=(255, 255, 255), opacity=0.0, side="double",
                                          cast_shadow=False, receive_shadow=False)
@@ -608,6 +620,7 @@ class Coach:
         return start, max(0.0, 1.0 - t / 0.6)
 
     def update(self, tool: np.ndarray, now: float) -> None:
+        self.label.visible = not NO_WORDS and not _narrow(self.client)
         eye = np.asarray(self.client.camera.position, dtype=np.float64)
         if self.beside:  # to the left of the hand, as this viewer sees it
             look = np.asarray(self.client.camera.look_at, dtype=np.float64)

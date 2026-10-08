@@ -225,10 +225,13 @@ footer p { margin: 4px 0; }
   .sidenav a { padding: 7px 9px; font-size: 14px; gap: 7px; }
   .group-head { gap: 12px; }
   .group-head .num { width: 32px; height: 32px; font-size: 17px; }
-  .load { top: 10px; transform: translateX(-50%); padding: 8px 12px; }  /* clear of the Drive button below */
-  .load .lmsg { margin-bottom: 6px; font-size: 13px; }
   .gate small { font-size: 12px; }
   .logos .autolab { height: 22px; } .logos .berkeley { height: 27px; } .logos .nvidia { height: 21px; }
   .tools .note { display: none; }
+}
+/* a phone or a touch screen: the block is the clip and the Drive button; the live page opens full screen */
+@media (pointer: coarse), (max-width: 760px) {
+  .live:not(.full) .screen iframe, .live:not(.full) .load { display: none; }
+  .live:not(.full) .tools .expand { display: none; }  /* Drive opens full screen; in full screen this is Close */
 }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }

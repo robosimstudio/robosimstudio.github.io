@@ -3,6 +3,10 @@
 // Each case study's block (.live[data-id]) embeds that task's viser page from its own subdomain.
 // - It connects only when scrolled into view (a third of it showing), at most MAX_LIVE at once, and
 //   lets go once it has been out of view for RELEASE_MS: no hidden streams, no held driver's seat.
+//   On a phone (or any touch screen) it does not connect in the page at all: the block shows its clip
+//   and the Drive button, and the live page loads only when Drive opens it full screen (a viser page
+//   squeezed into a phone-wide block put its welcome card and panel under the button), and goes
+//   again on Close.
 // - Until a visitor presses "Drive the robot" a gate lies over it, so the page scrolls past the
 //   simulation instead of the simulation's camera eating the wheel or the swipe. On a desktop the
 //   gate comes back when the pointer leaves the block; on a phone (or a narrow window) the demo
@@ -88,6 +92,7 @@
     $(b, ".expand").textContent = "Full screen";
     $(b, ".gate").removeAttribute("aria-hidden");
     if (!blocks.some((x) => x.classList.contains("full"))) document.body.classList.remove("locked");
+    if (small()) disconnect(b);  // back to the clip: no live page in a phone-wide block
   }
   for (const b of blocks) {
     const open = $(b, "a.open");
@@ -117,7 +122,7 @@
       const s = state.get(e.target);
       s.ratio = e.intersectionRatio;
       s.outSince = e.intersectionRatio > 0 ? null : (s.outSince || now);
-      if (e.intersectionRatio >= 0.34) connect(e.target);
+      if (e.intersectionRatio >= 0.34 && !small()) connect(e.target);
     }
   }, { threshold: [0, 0.1, 0.34, 0.6, 1] });
   blocks.forEach((b) => watch.observe(b));
