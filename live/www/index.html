@@ -9,14 +9,17 @@
 </head>
 <body>
 
-<nav class="toc" aria-label="Sections">
-  <ol>
-    <li><a href="#overview" title="Overview"><span>Overview</span></a></li>
-    <li><a href="#what" title="What RSS is"><span>What RSS is</span></a></li>
-    <li><a href="#how" title="How it works"><span>How it works</span></a></li>
-    <li><a href="#cases" title="Case studies"><span>Case studies</span></a></li>
-    <li><a href="#manual" title="User manual"><span>User manual</span></a></li>
-  </ol>
+<nav class="topbar" aria-label="Sections">
+  <div class="bar">
+    <a class="brand" href="#overview"><svg viewBox="0 0 100 100" aria-hidden="true" class="mark"><rect x="45.5" y="2.0" width="9.0" height="15.0" rx="3" fill="currentColor"/><rect x="17.0" y="15.0" width="66.0" height="14.5" rx="3" fill="currentColor"/><path d="M34.52,30.00 L34.51,43.09 L24.38,79.01 L23.44,80.00 L19.10,79.92 L18.40,79.00 L8.27,43.09 L8.28,41.36 L16.56,40.79 L16.56,37.73 L26.79,37.73 L26.79,35.59 L24.58,35.59 L24.58,30.00 L28.34,30.00 L28.73,31.23 L28.34,32.29 L31.82,32.29 L31.43,31.23 L31.82,30.00 L34.52,30.00 Z M27.18,48.39 L15.53,48.39 L14.51,49.48 L20.32,71.09 L21.01,72.00 L22.43,71.20 L28.26,50.56 L28.13,49.09 L27.18,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M65.48,30.00 L65.49,43.09 L75.62,79.01 L76.56,80.00 L80.90,79.92 L81.60,79.00 L91.73,43.09 L91.72,41.36 L83.44,40.79 L83.44,37.73 L73.21,37.73 L73.21,35.59 L75.42,35.59 L75.42,30.00 L71.66,30.00 L71.27,31.23 L71.66,32.29 L68.18,32.29 L68.57,31.23 L68.18,30.00 L65.48,30.00 Z M72.82,48.39 L84.47,48.39 L85.49,49.48 L79.68,71.09 L78.99,72.00 L77.57,71.20 L71.74,50.56 L71.87,49.09 L72.82,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M10,93 Q50,71 90,93" fill="none" stroke="#5B3FA6" stroke-width="10.4" stroke-linecap="round"/></svg><span>RSS</span></a>
+    <ol>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#bar">Wipe the bar</a></li>
+      <li><a href="#cable">Route the cable</a></li>
+      <li><a href="#towel">Fold the towel</a></li>
+      <li><a href="#peel">Peel the film</a></li>
+    </ol>
+  </div>
 </nav>
 
 <header class="hero" id="overview">
@@ -24,21 +27,18 @@
     <img src="video/bar.jpg" alt=""><img src="video/cable.jpg" alt=""><img src="video/towel.jpg" alt=""><img src="video/peel.jpg" alt="">
   </div>
   <div class="wrap">
-    <span class="badge">Live · four simulations on GPUs</span>
+    <div class="logos">
+      <a href="https://autolab.berkeley.edu/" target="_blank" rel="noopener"><picture><source srcset="logos/autolab-dark.png" media="(prefers-color-scheme: dark)"><img class="autolab" src="logos/autolab.png" alt="AUTOLab"></picture></a>
+      <a href="https://www.berkeley.edu/" target="_blank" rel="noopener"><picture><source srcset="logos/berkeley-dark.svg" media="(prefers-color-scheme: dark)"><img class="berkeley" src="logos/berkeley.svg" alt="UC Berkeley"></picture></a>
+      <a href="https://www.nvidia.com/" target="_blank" rel="noopener"><picture><source srcset="logos/nvidia-dark.svg" media="(prefers-color-scheme: dark)"><img class="nvidia" src="logos/nvidia.svg" alt="NVIDIA"></picture></a>
+    </div>
     <div class="title">
       <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="45.5" y="2.0" width="9.0" height="15.0" rx="3" fill="currentColor"/><rect x="17.0" y="15.0" width="66.0" height="14.5" rx="3" fill="currentColor"/><path d="M34.52,30.00 L34.51,43.09 L24.38,79.01 L23.44,80.00 L19.10,79.92 L18.40,79.00 L8.27,43.09 L8.28,41.36 L16.56,40.79 L16.56,37.73 L26.79,37.73 L26.79,35.59 L24.58,35.59 L24.58,30.00 L28.34,30.00 L28.73,31.23 L28.34,32.29 L31.82,32.29 L31.43,31.23 L31.82,30.00 L34.52,30.00 Z M27.18,48.39 L15.53,48.39 L14.51,49.48 L20.32,71.09 L21.01,72.00 L22.43,71.20 L28.26,50.56 L28.13,49.09 L27.18,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M65.48,30.00 L65.49,43.09 L75.62,79.01 L76.56,80.00 L80.90,79.92 L81.60,79.00 L91.73,43.09 L91.72,41.36 L83.44,40.79 L83.44,37.73 L73.21,37.73 L73.21,35.59 L75.42,35.59 L75.42,30.00 L71.66,30.00 L71.27,31.23 L71.66,32.29 L68.18,32.29 L68.57,31.23 L68.18,30.00 L65.48,30.00 Z M72.82,48.39 L84.47,48.39 L85.49,49.48 L79.68,71.09 L78.99,72.00 L77.57,71.20 L71.74,50.56 L71.87,49.09 L72.82,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M10,93 Q50,71 90,93" fill="none" stroke="#5B3FA6" stroke-width="10.4" stroke-linecap="round"/></svg>
       <h1>Robot Sim Studio <span class="acr">(RSS)</span></h1>
     </div>
     <p class="subtitle">Real2Sim case studies <span>· interactive physics for robot manipulation</span></p>
-    <div class="logos">
-      <a href="https://autolab.berkeley.edu/" target="_blank" rel="noopener"><img class="autolab" src="logos/autolab.png" alt="AUTOLab"></a>
-      <a href="https://www.berkeley.edu/" target="_blank" rel="noopener"><img class="berkeley" src="logos/berkeley.svg" alt="UC Berkeley"></a>
-      <a href="https://www.nvidia.com/" target="_blank" rel="noopener"><img class="nvidia" src="logos/nvidia.svg" alt="NVIDIA"></a>
-    </div>
     <div class="links">
       <a class="pill primary" href="#cases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Try the live demos</a>
-      <a class="pill" href="#how"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M2 3h12M2 8h12M2 13h8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>How it works</a>
-      <a class="pill" href="#manual"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 2.5h7l3 3v8H3z M10 2.5v3h3" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>User manual</a>
     </div>
   </div>
 </header>
@@ -50,9 +50,6 @@
     <a class="tile" href="#towel"><video src="video/towel.mp4" poster="video/towel.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="towel"></i>Fold the towel</span></a>
     <a class="tile" href="#peel"><video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video><span><i class="dot" data-status="peel"></i>Peel the film</span></a>
   </div>
-  <p class="caption"><b>Four case studies, simulated live.</b> Foam pressed on a chrome bar, a cable laid into clips, a towel folded over,
-    a protective film peeled off a phone. Each runs on its own GPU on this server, and these are not recordings: further down, every one
-    is embedded live, and you can take the robot's hand.</p>
 </div>
 
 <section id="tldr">
@@ -67,43 +64,12 @@
   </div>
 </section>
 
-<section class="band" id="what">
-  <div class="wrap">
-    <h2>What RSS is</h2>
-    <p class="lede">You put things in a place and step it: <code>rss.Scene</code>, <code>scene.add(spec)</code>, <code>scene.build()</code>,
-      <code>sim.run()</code>. RSS is also the import name: <code>import robosimstudio as rss</code>.</p>
-    <div class="grid three">
-      <div class="card"><h3>One way in</h3><p>There is exactly one way to add something, <code>Scene.add(spec)</code>. A new kind, solver or coupler registers from outside the library.</p></div>
-      <div class="card"><h3>Physics stated as data</h3><p>An asset says what it is; an arrangement says which backend serves each domain and how islands couple. What was built is recorded in a manifest.</p></div>
-      <div class="card"><h3>Several engines, one interface</h3><p>Newton's solvers (MuJoCo, VBD, XPBD, Featherstone, kinematic) and host engines co-simulated beside them (SuperDex, Genesis), pose in and wrench out.</p></div>
-      <div class="card"><h3>An interactive studio</h3><p>In the browser: click anything and drag it, drive each arm by a 6-DOF gizmo, tune deformable materials live, record takes and export them.</p></div>
-      <div class="card"><h3>Agent-driven real-to-sim</h3><p>A live page rebuilds <code>scene.py</code> on every save, and <code>./ctl snapshot --beside</code> shows the scene next to the real reference.</p></div>
-      <div class="card"><h3>Tasks as documents</h3><p>A task is a <code>.task</code> file in an extended BDDL that lowers to a <code>TaskSpec</code>; Python can build the same object.</p></div>
-    </div>
-  </div>
-</section>
-
-<section id="how">
-  <div class="wrap">
-    <h2>How it works</h2>
-    <p class="lede">Every layer reads the same specs, from the scene you declare to the frames you render.</p>
-    <div class="grid three steps">
-      <div class="card"><span class="eyebrow">01 · Declare</span><h3>Specs</h3><p>Frozen dataclasses, written through constructors (<code>rss.box</code>, <code>rss.sheet</code>, <code>rss.rod</code>, <code>rss.sponge</code>, <code>rss.robot</code>) or a <code>.task</code> document.</p></div>
-      <div class="card"><span class="eyebrow">02 · Arrange</span><h3>Physics</h3><p>An arrangement names a backend per domain, a coupler (<code>proxy</code>, <code>admm</code> or <code>one_way</code>), a collision policy and rates.</p></div>
-      <div class="card"><span class="eyebrow">03 · Compose</span><h3>Islands</h3><p>Interaction graph, islands, channels, contact routing, solver, schedule, manifest. Host engines are split out and fed mirrored poses.</p></div>
-      <div class="card"><span class="eyebrow">04 · Step</span><h3>One schedule</h3><p>One substep schedule over the composed solver, captured into a CUDA graph on Newton and Warp.</p></div>
-      <div class="card"><span class="eyebrow">05 · Watch</span><h3>View and render</h3><p>The studio in a browser; GL, path-traced RTX, pyrender or offline mp4. A path-traced re-render replays recorded state, and nothing is re-simulated.</p></div>
-      <div class="card"><span class="eyebrow">06 · Drive</span><h3>Policies and data</h3><p>An environment driven by a scripted routine, a graph policy or a VLA over a socket; episodes, video and LeRobot export.</p></div>
-    </div>
-  </div>
-</section>
-
 <section class="band" id="cases">
   <div class="wrap">
     <h2>Case studies</h2>
     <p class="lede">Each demo below is the live simulation, embedded. Press <b>Drive the robot</b> to take the robot's hand; until then the
-      page scrolls past it. One person drives at a time and everyone else watches the same simulation. On a phone the demo opens full
-      screen.</p>
+      page scrolls past it. Until someone grabs it, each robot runs a preprogrammed motion; the hand turns blue while a person drives.
+      One person drives at a time and everyone else watches the same simulation. On a phone the demo opens full screen.</p>
   </div>
 
   <article class="case" id="bar">
@@ -120,13 +86,15 @@
         <div class="screen">
           <video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video>
           <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
         </div>
         <div class="tools"><i class="dot" data-status="bar"></i><span class="note">Live simulation</span><span class="spacer"></span>
           <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
       </div>
       <aside class="how">
         <h4>How to drive</h4>
+        <p class="who"><i aria-hidden="true"></i><span>Until you grab it, the robot runs a <b>preprogrammed</b> motion. When you grab the hand
+          and it turns <b>blue</b>, you're driving.</span></p>
         <ul>
           <li><b>Sponge</b><span>Drag it down to press it onto the bar, sideways to wipe.</span></li>
           <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
@@ -162,13 +130,15 @@
         <div class="screen">
           <video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video>
           <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
         </div>
         <div class="tools"><i class="dot" data-status="cable"></i><span class="note">Live simulation</span><span class="spacer"></span>
           <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
       </div>
       <aside class="how">
         <h4>How to drive</h4>
+        <p class="who"><i aria-hidden="true"></i><span>Until you grab it, the robot runs a <b>preprogrammed</b> motion. When you grab the hand
+          and it turns <b>blue</b>, you're driving.</span></p>
         <ul>
           <li><b>Hand</b><span>Drag it: up lifts the cable, sideways carries it along the clips.</span></li>
           <li><b>Shadow</b><span>Drag the hand's shadow on the bench to move it in or out.</span></li>
@@ -194,13 +164,15 @@
         <div class="screen">
           <video src="video/towel.mp4" poster="video/towel.jpg" muted loop playsinline autoplay></video>
           <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
         </div>
         <div class="tools"><i class="dot" data-status="towel"></i><span class="note">Live simulation</span><span class="spacer"></span>
           <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
       </div>
       <aside class="how">
         <h4>How to drive</h4>
+        <p class="who"><i aria-hidden="true"></i><span>Until you grab it, the robot runs a <b>preprogrammed</b> motion. When you grab the hand
+          and it turns <b>blue</b>, you're driving.</span></p>
         <ul>
           <li><b>Hand</b><span>Drag it: up lifts the towel's edge, sideways carries it over.</span></li>
           <li><b>Softness</b><span>The slider in the panel runs from canvas to silk.</span></li>
@@ -226,13 +198,15 @@
         <div class="screen">
           <video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video>
           <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
         </div>
         <div class="tools"><i class="dot" data-status="peel"></i><span class="note">Live simulation</span><span class="spacer"></span>
           <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
       </div>
       <aside class="how">
         <h4>How to drive</h4>
+        <p class="who"><i aria-hidden="true"></i><span>Until you grab it, the robot runs a <b>preprogrammed</b> motion. When you grab the hand
+          and it turns <b>blue</b>, you're driving.</span></p>
         <ul>
           <li><b>Hand</b><span>Drag it down the phone's face to peel the film off. It plays in slow motion.</span></li>
           <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
@@ -242,100 +216,6 @@
       </aside>
     </div>
   </article>
-</section>
-
-<section id="manual">
-  <div class="wrap manual">
-    <h2>User manual</h2>
-    <p class="lede">The essentials, from the RoboSimStudio repository's README and docs. RSS is work in progress, and its code is not public yet.</p>
-
-    <h3>Requirements</h3>
-    <p>An NVIDIA GPU with a driver new enough for the CUDA runtime that Warp ships, and <a href="https://docs.astral.sh/uv/" target="_blank" rel="noopener">uv</a>.
-      Optional extras: <code>[studio]</code> (the browser studio), <code>[bench]</code> (tasks and policies), <code>[rtx]</code> (the path tracer) and
-      <code>[superdex]</code> (Python 3.12).</p>
-
-    <h3>Install and open a first scene</h3>
-    <div class="code"><button class="copy" type="button" data-copy="c-install">Copy</button><pre id="c-install">git clone https://github.com/KeplerC/robosimstudio.git
-cd robosimstudio
-uv run -m examples.scenes.rigid                            # two arms and three shapes; click and drag any of them
-uv run python scripts/studio.py --task tool_sort/level2_1  # the studio on a task</pre>
-      <span class="src">Each prints a share URL; <code>--no-share</code> keeps it local. The first run builds the environment (about a minute), then Warp's kernel cache.</span></div>
-
-    <h3>Put things in a place and step it</h3>
-    <div class="code"><button class="copy" type="button" data-copy="c-hello">Copy</button><pre id="c-hello">import robosimstudio as rss
-
-scene = rss.Scene(cell="bench_075")
-cube  = scene.add(rss.box(name="cube", half=(0.025,) * 3, at=(0, 0, 0.2)))
-scene.add(rss.robot("panda"))
-
-sim = scene.build()
-sim.run(150).sync()
-print(cube.position)        # (0.600, 0.000, 0.775) -- 25 mm above a 750 mm bench
-rss.view(sim)               # ...and drive it in a browser</pre>
-      <span class="src">Swap <code>rss.box</code> for <code>rss.rod</code>, <code>rss.sheet</code> or <code>rss.sponge</code> and you have a rope, a towel, or a block of FEM foam co-simulated by SuperDex.</span></div>
-
-    <h3>Write a scene</h3>
-    <p>Constructors build the specs: <code>rss.sheet(name=, size=, cells=, at=, material=)</code>, <code>rss.rod(...)</code>,
-      <code>rss.RodSpec(nodes=…)</code>, <code>rss.SoftSpec(asset=…)</code>, <code>rss.sponge(...)</code>, <code>rss.robot("panda", at=, arm=, gripper=)</code>.
-      Poses are in the cell's work-surface frame. Change the physics with <code>scene.with_physics(substeps=4)</code>. Nine runnable examples, in reading
-      order: <code>rigid</code>, <code>cable</code>, <code>cloth</code>, <code>cables</code>, <code>engines</code>, <code>sponge</code>, <code>genesis_cloth</code>,
-      <code>ported</code>, <code>custom</code>.</p>
-
-    <h3>Write a task</h3>
-    <div class="code"><button class="copy" type="button" data-copy="c-task">Copy</button><pre id="c-task">(define (problem PICK_UP_THE_HAMMER)
-  (:language pick up the hammer and place it in bin2)
-  (:staging
-    (:scene bench_075)
-    (:embodiment panda)
-    (:control-mode joint_position)
-    (:episodes (:count 1) (:seed 0) (:sampler fixed))
-    (:max-steps 2400)
-  )
-  (:objects hammer_0 - hammer)
-  (:regions
-    (bin2_hammer_region (:target bin2) (:ranges ((-0.195 -0.245 0.0 0.0))))
-  )
-  (:init)
-  (:goal (In hammer_0 bin2_hammer_region))
-)</pre>
-      <span class="src">Build it with <code>uv run python scripts/bench_smoke.py --task &lt;suite&gt;/&lt;variant&gt;</code>, run it with
-        <code>scripts/bench_run.py --task &lt;suite&gt;/&lt;variant&gt; --solve graph --capture-state</code>, and list tasks with <code>--list</code>.</span></div>
-
-    <h3>View and drive</h3>
-    <div class="table"><table>
-      <thead><tr><th>Call</th><th>What it opens</th></tr></thead>
-      <tbody>
-        <tr><td><code>rss.view(sim)</code></td><td>The studio: panels, drag handles, gizmo IK, material tuning, takes. Options include <code>panels="all"</code>, <code>share=False</code>, <code>render_every=4</code>.</td></tr>
-        <tr><td><code>rss.viewer(sim)</code></td><td>A thin viser viewer.</td></tr>
-        <tr><td><code>rss.draw(sim)</code></td><td>The same viewer with the loop written for you.</td></tr>
-        <tr><td><code>scripts/studio.py --task …</code></td><td>The studio on a registered task.</td></tr>
-      </tbody>
-    </table></div>
-
-    <h3>Extend it</h3>
-    <div class="grid two">
-      <div class="card"><h4>A robot</h4><p>An <code>EmbodimentSpec</code> and an optional <code>GripperSpec</code>: two declarations, no code. <code>docs/adding_a_robot.md</code></p></div>
-      <div class="card"><h4>An asset</h4><p>One <code>AssetRecord</code> registered beside its bytes. <code>docs/adding_an_asset.md</code></p></div>
-      <div class="card"><h4>A task</h4><p>A <code>.task</code> document, plus optional <code>staging.py</code>, <code>scenes.py</code> and <code>assets/</code>. <code>docs/adding_a_task.md</code></p></div>
-      <div class="card"><h4>A physics implementation</h4><p>A backend for a domain, registered from outside. <code>docs/adding_a_physics_implementation.md</code></p></div>
-    </div>
-
-    <h3>From real to sim, with an agent</h3>
-    <p>Start the live page, then point a coding agent at it. The procedure lives in the repository (<code>AGENTS.md</code> and the
-      <code>real-to-sim</code> skill), not in the prompt.</p>
-    <div class="code"><button class="copy" type="button" data-copy="c-live">Copy</button><pre id="c-live">cd examples/live
-./ctl up                                  # the page; prints http://localhost:8080 (--share adds a public URL)
-claude --permission-mode acceptEdits      # or: codex -a on-request -s workspace-write</pre>
-      <span class="src">The agent then uses <code>./ctl status</code>, <code>./ctl snapshot --camera &lt;name&gt; --beside ref/&lt;photo&gt;</code>,
-        <code>./ctl catalog robots cells</code>, <code>./ctl eval "sim['&lt;name&gt;'].position"</code> and <code>./ctl run N</code>.
-        A rebuild takes about 6 s, and the swap into the page under 0.1 s.</span></div>
-    <div class="grid four steps">
-      <div class="card"><span class="eyebrow">01</span><h4>Read the reference</h4><p>The surface, the robot, each object, the camera.</p></div>
-      <div class="card"><span class="eyebrow">02</span><h4>One thing per save</h4><p>Cell, robot, objects, camera; after each save, <code>status</code> and <code>snapshot --beside</code>.</p></div>
-      <div class="card"><span class="eyebrow">03</span><h4>Act</h4><p><code>./ctl run 120</code>, or a generator through <code>eval</code>.</p></div>
-      <div class="card"><span class="eyebrow">04</span><h4>Stop</h4><p>When the pair agrees, or say which number the reference cannot settle.</p></div>
-    </div>
-  </div>
 </section>
 
 <footer>

@@ -1,4 +1,4 @@
-// The project page's live demos, banner and section menu.
+// The project page's live demos, banner and section bar.
 //
 // Each case study's block (.live[data-id]) embeds that task's viser page from its own subdomain.
 // - It connects only when scrolled into view (a third of it showing), at most MAX_LIVE at once, and
@@ -143,25 +143,21 @@
   poll();
   setInterval(poll, 20000);
 
-  // ---- the section menu follows the reader
-  const links = new Map([...document.querySelectorAll(".toc a[href^='#']")].map((a) => [a.getAttribute("href").slice(1), a]));
-  const spy = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue;
-      for (const a of links.values()) a.classList.remove("on");
-      const a = links.get(e.target.id);
-      if (a) a.classList.add("on");
-    }
-  }, { rootMargin: "-40% 0px -55% 0px" });
-  for (const id of links.keys()) { const el = document.getElementById(id); if (el) spy.observe(el); }
-
-  // ---- copy buttons on code
-  for (const btn of document.querySelectorAll("[data-copy]")) {
-    btn.addEventListener("click", async () => {
-      const text = document.getElementById(btn.dataset.copy).innerText;
-      try { await navigator.clipboard.writeText(text); btn.textContent = "Copied"; }
-      catch (e) { btn.textContent = "Select and copy"; }
-      setTimeout(() => { btn.textContent = "Copy"; }, 1600);
-    });
+  // ---- the section bar marks the section in view (the band a third of the way down the window)
+  const links = new Map([...document.querySelectorAll(".topbar ol a[href^='#']")].map((a) => [a.getAttribute("href").slice(1), a]));
+  const sections = [...links.keys()].map((id) => document.getElementById(id)).filter(Boolean);
+  let marked = null;
+  function mark() {
+    const line = innerHeight / 3;
+    let on = sections[0];
+    for (const el of sections) if (el.getBoundingClientRect().top <= line) on = el;
+    if (on === marked) return;
+    marked = on;
+    for (const [id, a] of links) a.classList.toggle("on", id === on.id);
+    const a = links.get(on.id), bar = a.parentElement.parentElement;  // keep it in sight on a narrow bar
+    if (bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: a.offsetLeft - (bar.clientWidth - a.offsetWidth) / 2, behavior: "smooth" });
   }
+  addEventListener("scroll", mark, { passive: true });
+  addEventListener("resize", mark);
+  mark();
 })();

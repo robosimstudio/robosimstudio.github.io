@@ -14,7 +14,16 @@ kin), so only what one presses and what one sees change.
   dragged for :data:`HINT_REPEAT`): what to do, in words (:data:`TASKS`), over the tool, and a
   finger acting the drag out along its path drawn as arrows.
 * **While holding.** A light-blue shell lights the gripper up, a small dot marks where the hand is
-  heading and a line pulls from the hand to it; it clears on release.
+  heading and a line pulls from the hand to it; it clears on release. The shell is one piece per hand
+  body (the fingers move), posed from the very state the hand is drawn from, in the same draw and the
+  same atomic update: posed apart from the hand, it ran ahead of it between draws and the black hand
+  flashed through it. Even posed together, viser now and then applies the hand's instanced GLBs a
+  frame apart from a plain mesh, so while held the hand itself draws at zero scale and the shell
+  stands in for it (casting its shadow): nothing black is left to flash through the blue. It is
+  opaque, except over a see-through housing (the cable's). It is posed in every draw, shown or not,
+  so the drag's own callback can show it the moment a drag starts (viser starts one after 3 px of
+  motion) instead of a control step and a draw later; on release it stays up for
+  :data:`SHELL_LINGER` draws more, until the hand is drawn again.
 
 :func:`install` patches ``PhoneControls`` (the cable's subclass too). Call before the page is built.
 """
@@ -37,9 +46,12 @@ SHADOW = (40, 40, 46)
 ZONE_RADIUS = 0.05
 """The invisible ball round each tool point that takes the drag [m]."""
 DOT_RADIUS = 0.008
-SHELL_OFFSET, SHELL_OPACITY = 0.0015, 0.55
+SHELL_COLOR = (120, 175, 220)
+SHELL_OFFSET, SHELL_SEE_THROUGH = 0.0015, 0.55
+SHELL_LINGER = 2
 """The gripper's shell: pushed out along the normals [m] so it never fights the gripper's own
-surface (whose meshes carry baked colours), and how opaque."""
+surface (whose meshes carry baked colours), its opacity over a see-through housing, and the draws it
+stays up after a release (the hand comes back first)."""
 HINT_REPEAT = 45.0
 """A viewer who has dragged sees the hint again once nobody has dragged for this long [s]."""
 FINGER_RADIUS, FINGER_FORWARD = 0.012, 0.07
@@ -90,6 +102,9 @@ def _cable(wipe) -> tuple[str, list[Leg]]:
         Leg(tuple(0.01 * z + 0.09 * along), 0.5),
     ]
 
+
+_WP = None
+"""The phone demo's module, once :func:`install` has run (its DRIVER_GRACE)."""
 
 TASKS = {"wipe": _bar, "peel": _peel, "towel": _towel, "cable": _cable}
 """The driver's class (lower case) -> its hint: the words and the gesture."""
@@ -203,6 +218,15 @@ class Handle:
         """Viewer -> the depth factor of the drag they are in (a grab ball's face to its centre)."""
         self.probe = os.environ.get("RSW_PROBE", "")
         self.probe_at = 0.0
+        self.held_by: int | None = None
+        """The viewer whose drag lit the shell, until the loop's own ``dragging`` takes over."""
+        self.letting_go = False
+        """A release seen by the callback that the loop has not played yet."""
+        self.hide_hand = False
+        """This draw, the held hand's own instances draw at zero scale."""
+        self.linger = 0
+        self.view_seen: dict[int, float] = {}
+        """Viewer -> the recording camera file's mtime it was last set from."""
         self.ready = False
         scene = self.server.scene
         self.dot = scene.add_icosphere("/phone/target", radius=DOT_RADIUS, color=LIGHT_BLUE, opacity=0.95, subdivisions=2,
@@ -225,8 +249,23 @@ class Handle:
             end = eye + (end - eye) * self.scale.get(event.client_id, 1.0)
         if event.phase == "start":
             self.done.add(event.client_id)
+            if self._may_drive(event.client_id):
+                self.held_by, self.letting_go = event.client_id, False
+                self._show_shells(True)
+        elif event.phase == "end" and event.client_id in (self.held_by, self.c.driver):
+            self.held_by, self.letting_go = None, True  # the shell comes down in the draws after the hand is back
         self.last_drag = time.time()
         self.c.events.append((event.phase, event.client_id, end, view))
+
+    def _may_drive(self, cid: int) -> bool:
+        """``PhoneControls._event``'s rule: someone else holds the hand, or let go under DRIVER_GRACE ago."""
+        c = self.c
+        grace = float(getattr(_WP, "DRIVER_GRACE", 1.0))
+        return not (c.driver is not None and c.driver != cid and (c.dragging or time.time() - c.released_at < grace))
+
+    def _show_shells(self, on: bool) -> None:
+        for _b, shell in self.shells:
+            shell.visible = on
 
     def _drag_hand(self, rows):
         def on(event) -> None:
@@ -297,8 +336,6 @@ class Handle:
 
     def _build(self, wipe) -> None:
         """The grab balls and the gripper shells, once the driver exists."""
-        import trimesh
-
         scene = self.server.scene
         self._find_hands(wipe)
         for i, _p in enumerate(tool_points(wipe)):
@@ -306,33 +343,90 @@ class Handle:
                                        cast_shadow=False, receive_shadow=False)
             zone.on_drag(self._drag)
             self.zones.append(zone)
-        model, state = self.session.env.model, _state(wipe)
-        bq = state.body_q.numpy()
+        self._build_shells()
+        self._wrap_subclass()
+        self._wrap_draw()
+        self._wrap_instances()
+        self.ready = True
+
+    def _build_shells(self) -> None:
+        """One shell per hand body: its visible meshes in the body's frame, welded, pushed out along the
+        normals."""
+        import trimesh
+
+        scene, model = self.server.scene, self.session.env.model
         body, xf, scale = model.shape_body.numpy(), model.shape_transform.numpy(), model.shape_scale.numpy()
-        for ik, shapes in zip(arms(wipe), self.hands):
-            pos, quat = ik.ee_pose(state)
-            inv = np.linalg.inv(_matrix([*pos, *quat]))
-            verts, faces, n = [], [], 0
+        finishes = getattr(self.session.viewer, "_finishes", None) or {}
+        for arm, shapes in enumerate(self.hands):
+            per_body: dict[int, list[int]] = {}
             for s in sorted(shapes):
                 src = model.shape_source[s]
-                if src is None or not hasattr(src, "vertices"):
-                    continue
-                m = inv @ _matrix(bq[int(body[s])]) @ _matrix(xf[s])
-                v = (np.asarray(src.vertices, dtype=np.float64) * scale[s]) @ m[:3, :3].T + m[:3, 3]
-                verts.append(v)
-                faces.append(np.asarray(src.indices, dtype=np.int64).reshape(-1, 3) + n)
-                n += len(v)
-            if not verts:
-                self.shells.append(None)
-                continue
-            welded, inverse = np.unique(np.round(np.concatenate(verts), 6), axis=0, return_inverse=True)
-            f = inverse.reshape(-1)[np.concatenate(faces)]
-            normals = np.asarray(trimesh.Trimesh(welded, f, process=False).vertex_normals)
-            self.shells.append(scene.add_mesh_simple(
-                f"/phone/shell_{len(self.shells)}", (welded + SHELL_OFFSET * normals).astype(np.float32), f.astype(np.uint32),
-                color=LIGHT_BLUE, opacity=SHELL_OPACITY, cast_shadow=False, receive_shadow=False, visible=False))
-        self._wrap_subclass()
-        self.ready = True
+                if src is not None and hasattr(src, "vertices"):
+                    per_body.setdefault(int(body[s]), []).append(int(s))
+            for b, ss in per_body.items():
+                verts, faces, n = [], [], 0
+                for s in ss:
+                    src, m = model.shape_source[s], _matrix(xf[s])
+                    v = (np.asarray(src.vertices, dtype=np.float64) * scale[s]) @ m[:3, :3].T + m[:3, 3]
+                    verts.append(v)
+                    faces.append(np.asarray(src.indices, dtype=np.int64).reshape(-1, 3) + n)
+                    n += len(v)
+                welded, inverse = np.unique(np.round(np.concatenate(verts), 6), axis=0, return_inverse=True)
+                f = inverse.reshape(-1)[np.concatenate(faces)]
+                normals = np.asarray(trimesh.Trimesh(welded, f, process=False).vertex_normals)
+                see_through = any(float(getattr(finishes.get(s), "opacity", 1.0)) < 1.0 for s in ss)
+                self.shells.append((b, scene.add_mesh_simple(
+                    f"/phone/shell_{arm}_{b}", (welded + SHELL_OFFSET * normals).astype(np.float32), f.astype(np.uint32),
+                    color=SHELL_COLOR, opacity=SHELL_SEE_THROUGH if see_through else None,
+                    cast_shadow=True, receive_shadow=False, visible=False)))
+
+    def _wrap_draw(self) -> None:
+        """Pose the shells inside the page's draw, from the state it draws, in one atomic update with it."""
+        session = self.session
+        draw0 = session.draw
+
+        def draw() -> None:
+            with self.server.atomic():
+                self._pose_shells()
+                draw0()
+
+        session.draw = draw
+
+    def _wrap_instances(self) -> None:
+        """While held, the hand's own instances draw at zero scale (see the module docstring)."""
+        viewer = self.session.viewer
+        log0 = viewer._log_pbr_instances
+        mine = set().union(*self.hands) if self.hands else set()
+
+        def log(name, mesh, xforms, scales):
+            if self.hide_hand and mine:
+                shapes = viewer._batch_shapes(viewer._qualify(name))
+                rows = [] if shapes is None else [k for k, sh in enumerate(shapes) if int(sh) in mine]
+                if rows:
+                    sc = viewer._to_numpy(scales)
+                    sc = np.ones((len(shapes), 3), dtype=np.float32) if sc is None else np.array(sc, dtype=np.float32)
+                    sc[rows] = 0.0
+                    scales = sc
+            return log0(name, mesh, xforms, scales)
+
+        viewer._log_pbr_instances = log
+
+    def _pose_shells(self) -> None:
+        if not self.shells:
+            return
+        dragging = bool(self.c.dragging)
+        if dragging:
+            self.held_by = None  # the loop has it now
+        else:
+            self.letting_go = False
+        held = (dragging and not self.letting_go) or self.held_by is not None
+        self.hide_hand = held
+        shown = held or self.linger > 0
+        self.linger = SHELL_LINGER if held else max(0, self.linger - 1)
+        bq = self.session.env.state.body_q.numpy()
+        for b, shell in self.shells:
+            shell.position, shell.wxyz = tuple(float(v) for v in bq[b, :3]), _xyzw_to_wxyz(bq[b, 3:7])
+            shell.visible = shown
 
     def _wrap_subclass(self) -> None:
         """A page whose controls subclass ``PhoneControls`` (the cable's) draws after the base refresh:
@@ -381,14 +475,6 @@ class Handle:
         if holding:
             self.dot.position = tuple(float(v) for v in aim)
             self.tether.points = np.asarray([[wipe.tcp(), aim]], dtype=np.float32)
-        state = _state(wipe)
-        for shell, ik in zip(self.shells, arms(wipe)):
-            if shell is None:
-                continue
-            shell.visible = holding
-            if holding:
-                pos, quat = ik.ee_pose(state)
-                shell.position, shell.wxyz = tuple(float(v) for v in pos), _xyzw_to_wxyz(quat)
         self._hints(wipe, now)
         self._probe(wipe, now)
 
@@ -415,10 +501,13 @@ class Handle:
                 coach.update(tool_points(wipe)[0], now)
 
     def _probe(self, wipe, now) -> None:
-        """For scripted recordings: where the things one presses are, and the hint's path, in world metres."""
+        """For scripted recordings: where the things one presses are, the hint's path (world metres) and
+        the simulation's clock against the wall's; and ``<probe>.view`` (JSON: position, look_at), when
+        a recording writes one, sets every viewer's camera."""
         if not self.probe or now - self.probe_at < 0.2:
             return
         self.probe_at = now
+        self._recording_view()
         cams = {}
         for cid, client in self.server.get_clients().items():
             cam = client.camera
@@ -428,13 +517,36 @@ class Handle:
         make = TASKS.get(type(wipe).__name__.lower())
         legs = [list(leg.to) for leg in make(wipe)[1]] if make else []
         shadow = getattr(self.c, "shadow", None)
-        data = {"tool": tool_points(wipe)[0].tolist(), "tcp": np.asarray(wipe.tcp()).tolist(), "target": target(wipe).tolist(),
+        data = {"wall": time.time(), "sim_time": float(self.session.env.sim_time),
+                "tool": tool_points(wipe)[0].tolist(), "tcp": np.asarray(wipe.tcp()).tolist(), "target": target(wipe).tolist(),
                 "dragging": bool(self.c.dragging), "legs": legs, "cams": cams,
                 "shadow": None if shadow is None else list(map(float, shadow.position))}
         tmp = self.probe + ".tmp"
         with open(tmp, "w") as f:
             json.dump(data, f)
         os.replace(tmp, self.probe)
+
+    def _recording_view(self) -> None:
+        path = self.probe + ".view"
+        try:
+            stamp = os.stat(path).st_mtime
+        except OSError:
+            return
+        clients = self.server.get_clients()
+        if all(self.view_seen.get(cid) == stamp for cid in clients):
+            return
+        try:
+            with open(path) as f:
+                view = json.load(f)
+        except (OSError, ValueError):
+            return
+        for cid, client in clients.items():
+            if self.view_seen.get(cid) == stamp:
+                continue
+            with client.atomic():  # position first: viser carries look_at along with a new position
+                client.camera.position = tuple(map(float, view["position"]))
+                client.camera.look_at = tuple(map(float, view["look_at"]))
+            self.view_seen[cid] = stamp
 
 
 class Coach:
@@ -526,6 +638,8 @@ cable's own say it in their modules)."""
 
 def install(wp) -> None:
     """Patch ``wp.PhoneControls``: the robot's hand is the handle; the ball and its label are never drawn."""
+    global _WP
+    _WP = wp
     cls = wp.PhoneControls
     if getattr(cls, "_rsw_handle", False):
         return

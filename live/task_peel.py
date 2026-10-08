@@ -16,12 +16,17 @@ path, never edited); ``peel_fast.py`` has the measurements behind each:
   instead of resetting and replaying the routine's ~800-step hold-and-pinch. If a restore ever
   comes back unhealthy the page falls back to the original reset and pre-roll.
 
+* **the film shows**: the task draws it at 10 % opacity, tuned so the path tracer matches the real
+  clip's clear film (``rgbs/tasks/rgbs/peel/layout.py``); in the browser's raster view that is all
+  but invisible from any angle, so this page draws it at :data:`FILM_SHOWN` (``show_film``).
+
 ``PEEL_PROFILE=1`` in the environment arms the studio's loop profiler and prints its table with
 every 30 s status line.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import os
 import time
 
@@ -30,6 +35,24 @@ import peel_fast as pf
 
 SETUP_TEXT = "Setting up -- the robot is taking the film's tab (about a minute)..."
 """Shown while the routine's pre-roll plays: once per process now, ~50 s build + ~50 s pre-roll."""
+FILM_SHOWN = 0.35
+"""The film's opacity on this page (the panel's black block once shipped it at 0.35)."""
+
+
+def show_film() -> None:
+    """Draw the film at :data:`FILM_SHOWN` in the browser: the viewer's garment, not the scene's spec."""
+    from robosimstudio_studio.garments import ViewerStudio
+
+    set0 = ViewerStudio.set_garments
+    if getattr(set0, "_rsw_film", False):
+        return
+
+    def set_garments(self, garments):
+        return set0(self, [dataclasses.replace(g, opacity=max(float(g.opacity), FILM_SHOWN)) if g.name == "film" else g
+                           for g in garments])
+
+    set_garments._rsw_film = True
+    ViewerStudio.set_garments = set_garments
 
 
 def make_session(wp, pl):
@@ -126,6 +149,7 @@ def main(opts, rest) -> int:
         return env
 
     pl.build_env = build_env
+    show_film()
     wp.PhoneSession = make_session(wp, pl)
     args = ["--scene", "peel", "--name", opts.name, "--port", str(opts.port)]
     if opts.share:
