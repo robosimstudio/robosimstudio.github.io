@@ -80,7 +80,7 @@ code, pre { font-family: var(--mono); font-size: 13.5px; }
   padding: 10px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px var(--shade);
 }
 .banner .lead { display: flex; justify-content: center; margin-bottom: 16px; }
-.banner .note { width: min(var(--read), 100%); margin: 18px auto 0; text-align: center; color: var(--muted); font-size: 16px; line-height: 1.6; }
+.banner .note { margin: 16px 0 0; padding: 0 11px; text-align: left; color: var(--muted); font-size: 16px; line-height: 1.6; }  /* edges on the videos' (frame padding + border) */
 .banner .note b { color: var(--accent); }
 .banner .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .tile { display: grid; gap: 0; text-decoration: none; color: var(--ink); border-radius: 10px; overflow: hidden; background: var(--stage); }
@@ -232,7 +232,7 @@ footer p { margin: 4px 0; }
   .banner .frame { padding: 8px; }
   .banner .row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .banner .lead { margin-bottom: 12px; }
-  .banner .note { font-size: 15px; text-align: left; }
+  .banner .note { font-size: 15px; padding: 0 9px; }
   .pair { grid-template-columns: minmax(0, 1fr); }
   section { padding: 44px 0; }
   .logos { gap: 20px; }
