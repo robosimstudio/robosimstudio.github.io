@@ -78,6 +78,10 @@ code, pre { font-family: var(--mono); font-size: 13.5px; }
 .banner .frame {
   padding: 10px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px var(--shade);
 }
+.banner .pipeline {  /* RSS + the real task video -> its twin; the clip's own white, so a white card in both themes */
+  margin-bottom: 18px; padding: 10px; border-radius: 16px; background: #fff; border: 1px solid var(--line); box-shadow: 0 10px 30px var(--shade);
+}
+.banner .pipeline video { display: block; width: 100%; aspect-ratio: 2000 / 458; background: #fff; }
 .banner .lead { display: flex; justify-content: center; margin-bottom: 16px; }
 .banner .note { margin: 16px 0 0; padding: 0 11px; text-align: left; color: var(--muted); font-size: 16px; line-height: 1.6; }  /* edges on the videos' (frame padding + border) */
 .banner .note b { color: var(--accent); }
@@ -218,6 +222,7 @@ footer p { margin: 4px 0; }
   .banner .frame { padding: 8px; }
   .banner .row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
   .banner .lead { margin-bottom: 12px; }
+  .banner .pipeline { padding: 6px; margin-bottom: 14px; }
   .banner .note { font-size: 15px; padding: 0 9px; }
   .pair { grid-template-columns: minmax(0, 1fr); }
   section { padding: 44px 0; }
