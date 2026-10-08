@@ -74,12 +74,14 @@ code, pre { font-family: var(--mono); font-size: 13.5px; }
 .pill.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 .pill svg { width: 16px; height: 16px; }
 
-/* ---- the banner: the live demos' button over the three demos in a row, no text on the videos */
+/* ---- the banner: the live demos' button, the three demos in a row (no text on the videos), what they are */
 .banner { width: min(1040px, calc(100% - 32px)); margin: 8px auto 0; }
 .banner .frame {
   padding: 10px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); box-shadow: 0 10px 30px var(--shade);
 }
-.banner .head { display: flex; justify-content: center; padding: 6px 0 14px; }
+.banner .lead { display: flex; justify-content: center; margin-bottom: 16px; }
+.banner .note { width: min(var(--read), 100%); margin: 18px auto 0; text-align: center; color: var(--muted); font-size: 16px; line-height: 1.6; }
+.banner .note b { color: var(--accent); }
 .banner .row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
 .tile { display: grid; gap: 0; text-decoration: none; color: var(--ink); border-radius: 10px; overflow: hidden; background: var(--stage); }
 .tile video { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; display: block; }
@@ -229,7 +231,8 @@ footer p { margin: 4px 0; }
   .hero { padding: 30px 0 26px; }
   .banner .frame { padding: 8px; }
   .banner .row { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .banner .head { padding: 4px 0 10px; }
+  .banner .lead { margin-bottom: 12px; }
+  .banner .note { font-size: 15px; text-align: left; }
   .pair { grid-template-columns: minmax(0, 1fr); }
   section { padding: 44px 0; }
   .logos { gap: 20px; }
