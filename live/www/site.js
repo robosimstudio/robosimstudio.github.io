@@ -153,7 +153,8 @@
     for (const el of sections) if (el.getBoundingClientRect().top <= line) on = el;
     if (on === marked) return;
     marked = on;
-    for (const [id, a] of links) a.classList.toggle("on", id === on.id);
+    const part = links.get(on.id).dataset.part;  // a case in view marks its part too
+    for (const [id, a] of links) { a.classList.toggle("on", id === on.id); a.classList.toggle("part", id === part); }
     const a = links.get(on.id), bar = a.parentElement.parentElement;  // keep it in sight on the narrow strip
     if (bar.scrollWidth > bar.clientWidth) bar.scrollTo({ left: a.offsetLeft - (bar.clientWidth - a.offsetWidth) / 2, behavior: "smooth" });
   }

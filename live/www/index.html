@@ -12,15 +12,17 @@
 <nav class="sidenav" aria-label="Sections">
   <ul>
     <li><a href="#overview"><span class="dot"></span><span class="lbl">Overview</span></a></li>
-    <li><a href="#bar"><span class="dot"></span><span class="lbl">Wipe the bar</span></a></li>
-    <li><a href="#cable"><span class="dot"></span><span class="lbl">Route the cable</span></a></li>
-    <li><a href="#peel"><span class="dot"></span><span class="lbl">Peel the film</span></a></li>
+    <li><a href="#real"><span class="dot"></span><span class="lbl">Real video to RSS</span></a></li>
+    <li class="sub"><a href="#bar" data-part="real"><span class="dot"></span><span class="lbl">Wipe the bar</span></a></li>
+    <li class="sub"><a href="#peel" data-part="real"><span class="dot"></span><span class="lbl">Peel the film</span></a></li>
+    <li><a href="#extend"><span class="dot"></span><span class="lbl">Other deformables</span></a></li>
+    <li class="sub"><a href="#cable" data-part="extend"><span class="dot"></span><span class="lbl">Route the cable</span></a></li>
   </ul>
 </nav>
 
 <header class="hero" id="overview">
   <div class="collage" aria-hidden="true">
-    <img src="video/bar.jpg" alt=""><img src="video/cable.jpg" alt=""><img src="video/peel.jpg" alt="">
+    <img src="video/bar.jpg" alt=""><img src="video/peel.jpg" alt=""><img src="video/cable.jpg" alt="">
   </div>
   <div class="wrap">
     <div class="logos">
@@ -32,9 +34,9 @@
       <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="45.5" y="2.0" width="9.0" height="15.0" rx="3" fill="currentColor"/><rect x="17.0" y="15.0" width="66.0" height="14.5" rx="3" fill="currentColor"/><path d="M34.52,30.00 L34.51,43.09 L24.38,79.01 L23.44,80.00 L19.10,79.92 L18.40,79.00 L8.27,43.09 L8.28,41.36 L16.56,40.79 L16.56,37.73 L26.79,37.73 L26.79,35.59 L24.58,35.59 L24.58,30.00 L28.34,30.00 L28.73,31.23 L28.34,32.29 L31.82,32.29 L31.43,31.23 L31.82,30.00 L34.52,30.00 Z M27.18,48.39 L15.53,48.39 L14.51,49.48 L20.32,71.09 L21.01,72.00 L22.43,71.20 L28.26,50.56 L28.13,49.09 L27.18,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M65.48,30.00 L65.49,43.09 L75.62,79.01 L76.56,80.00 L80.90,79.92 L81.60,79.00 L91.73,43.09 L91.72,41.36 L83.44,40.79 L83.44,37.73 L73.21,37.73 L73.21,35.59 L75.42,35.59 L75.42,30.00 L71.66,30.00 L71.27,31.23 L71.66,32.29 L68.18,32.29 L68.57,31.23 L68.18,30.00 L65.48,30.00 Z M72.82,48.39 L84.47,48.39 L85.49,49.48 L79.68,71.09 L78.99,72.00 L77.57,71.20 L71.74,50.56 L71.87,49.09 L72.82,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M10,93 Q50,71 90,93" fill="none" stroke="#5B3FA6" stroke-width="10.4" stroke-linecap="round"/></svg>
       <h1>Robot Sim Studio <span class="acr">(RSS)</span></h1>
     </div>
-    <p class="subtitle">Real2Sim case studies <span>· interactive physics for robot manipulation</span></p>
+    <p class="subtitle">An interactive toolkit for physics-based simulation of Robot Manipulation Tasks</p>
     <div class="links">
-      <a class="pill primary" href="#cases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Try the live demos</a>
+      <a class="pill primary" href="#cases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Real2Sim Case Studies &ndash; live demos</a>
     </div>
   </div>
 </header>
@@ -42,8 +44,8 @@
 <div class="banner" aria-label="The three case studies">
   <div class="row">
     <a class="tile" href="#bar" aria-label="Wipe the bar"><video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video></a>
-    <a class="tile" href="#cable" aria-label="Route the cable"><video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video></a>
     <a class="tile" href="#peel" aria-label="Peel the film"><video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video></a>
+    <a class="tile" href="#cable" aria-label="Route the cable"><video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video></a>
   </div>
 </div>
 
@@ -61,16 +63,22 @@
 
 <section class="band" id="cases">
   <div class="wrap">
-    <h2>Case studies</h2>
+    <h2>Real2Sim Case Studies</h2>
     <p class="lede">Each demo below is the live simulation, embedded. Press <b>Drive the robot</b> to take the robot's hand; until then the
       page scrolls past it. Until someone grabs it, each robot runs a preprogrammed motion; the hand turns blue while a person drives.
       One person drives at a time and everyone else watches the same simulation. On a phone the demo opens full screen.</p>
   </div>
 
+  <div class="group" id="real">
+    <div class="wrap group-head">
+      <span class="num">1</span>
+      <div><h3>Convert the real video to RSS</h3>
+        <p>Two tasks rebuilt in RSS from videos of the real robot: wiping a grab bar and peeling the film off a phone.</p></div>
+    </div>
   <article class="case" id="bar">
     <div class="wrap case-head">
-      <span class="eyebrow">Case study 1 · Contact-rich wiping</span>
-      <h3>Wipe the bar</h3>
+      <span class="eyebrow">1.1 · Contact-rich wiping</span>
+      <h4>Wipe the bar</h4>
       <p>A chrome grab bar bolted into two black blocks, a blue marker stripe along its crown, and a kitchen sponge. The right arm presses
         and wipes while the left arm steadies the bar. The stripe comes off through a removal field fed by the sponge's own contact patch,
         so only real pressure cleans. The scene is the twin of a real clip, rebuilt by a coding agent.</p>
@@ -111,10 +119,50 @@
     </div>
   </article>
 
+  <article class="case" id="peel">
+    <div class="wrap case-head">
+      <span class="eyebrow">1.2 · Adhesive peeling</span>
+      <h4>Peel the film</h4>
+      <p>The protective film on a phone, held down by a field of adhesive bonds after AutoPeel (ICRA 2025). The left hand holds the phone;
+        the right has the film's tab and pulls it along the peel arc. Each bond lets go when it is stretched past its limit, one row at a
+        time.</p>
+      <div class="facts"><span>Bimanual i2rt YAM</span><span>Film: Newton VBD cloth</span><span>Arms: Newton (MuJoCo), one-way coupled</span><span>Staged from a real clip</span></div>
+    </div>
+    <div class="wide stagewrap">
+      <div class="live" data-id="peel" data-title="Peel the film">
+        <div class="screen">
+          <video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video>
+          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
+          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
+        </div>
+        <div class="tools"><i class="dot" data-status="peel"></i><span class="note">Live simulation</span><span class="spacer"></span>
+          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
+      </div>
+      <aside class="how">
+        <h4>How to drive</h4>
+        <p class="who"><i aria-hidden="true"></i><span>Until you grab it, the robot runs a <b>preprogrammed</b> motion. When you grab the hand
+          and it turns <b>blue</b>, you're driving.</span></p>
+        <ul>
+          <li><b>Hand</b><span>Drag it down the phone's face to peel the film off. It plays in slow motion.</span></li>
+          <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
+          <li><b>Buttons</b><span><i>New film</i> lays a fresh film; <i>Reset view</i> brings the camera back.</span></li>
+        </ul>
+        <p class="task">Peel the whole film off. The panel's map shows each bond as it stretches and breaks.</p>
+      </aside>
+    </div>
+  </article>
+  </div>
+
+  <div class="group" id="extend">
+    <div class="wrap group-head">
+      <span class="num">2</span>
+      <div><h3>Extend the scenario to other deformable objects</h3>
+        <p>The same toolkit on a deformable the videos don't show: a cable laid into clips.</p></div>
+    </div>
   <article class="case" id="cable">
     <div class="wrap case-head">
-      <span class="eyebrow">Case study 2 · Cable routing</span>
-      <h3>Route the cable</h3>
+      <span class="eyebrow">2.1 · Cable routing</span>
+      <h4>Route the cable</h4>
       <p>A 45 cm, 5 mm cable runs from a socket; lay it into three Y-prong clips. The cable is SuperDex's Cosserat rod, and every rigid shape it
         can touch is mirrored into SuperDex, so the cable feels the arm, the bench and the clips that Newton simulates. The hand holds the
         cable's end with node constraints re-aimed every substep.</p>
@@ -144,39 +192,7 @@
       </aside>
     </div>
   </article>
-
-  <article class="case" id="peel">
-    <div class="wrap case-head">
-      <span class="eyebrow">Case study 3 · Adhesive peeling</span>
-      <h3>Peel the film</h3>
-      <p>The protective film on a phone, held down by a field of adhesive bonds after AutoPeel (ICRA 2025). The left hand holds the phone;
-        the right has the film's tab and pulls it along the peel arc. Each bond lets go when it is stretched past its limit, one row at a
-        time.</p>
-      <div class="facts"><span>Bimanual i2rt YAM</span><span>Film: Newton VBD cloth</span><span>Arms: Newton (MuJoCo), one-way coupled</span></div>
-    </div>
-    <div class="wide stagewrap">
-      <div class="live" data-id="peel" data-title="Peel the film">
-        <div class="screen">
-          <video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video>
-          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
-        </div>
-        <div class="tools"><i class="dot" data-status="peel"></i><span class="note">Live simulation</span><span class="spacer"></span>
-          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
-      </div>
-      <aside class="how">
-        <h4>How to drive</h4>
-        <p class="who"><i aria-hidden="true"></i><span>Until you grab it, the robot runs a <b>preprogrammed</b> motion. When you grab the hand
-          and it turns <b>blue</b>, you're driving.</span></p>
-        <ul>
-          <li><b>Hand</b><span>Drag it down the phone's face to peel the film off. It plays in slow motion.</span></li>
-          <li><b>View</b><span>Drag empty space to turn; right-drag or two fingers to pan; scroll or pinch to zoom.</span></li>
-          <li><b>Buttons</b><span><i>New film</i> lays a fresh film; <i>Reset view</i> brings the camera back.</span></li>
-        </ul>
-        <p class="task">Peel the whole film off. The panel's map shows each bond as it stretches and breaks.</p>
-      </aside>
-    </div>
-  </article>
+  </div>
 </section>
 
 <footer>

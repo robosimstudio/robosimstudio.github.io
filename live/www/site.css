@@ -99,10 +99,22 @@ figure video, figure img { width: 100%; display: block; border-radius: 12px; bor
 figcaption { color: var(--muted); font-size: 14.5px; margin-top: 10px; }
 figcaption b { color: var(--ink); }
 
+/* ---- the case studies' two parts, numbered */
+.group { margin-top: 30px; }
+.group + .group { margin-top: 76px; }
+.group-head { display: flex; gap: 16px; align-items: flex-start; padding-bottom: 14px; margin-bottom: 26px; border-bottom: 2px solid var(--line); }
+.group-head .num {
+  flex: none; width: 40px; height: 40px; margin-top: 1px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: #fff; font: 800 20px/1 var(--display);
+}
+.group-head h3 { font-size: clamp(22px, 2.6vw, 28px); line-height: 1.2; }
+.group-head p { color: var(--muted); margin: 6px 0 0; }
+
 /* ---- a case study */
 .case { margin-top: 44px; }
 .case:first-of-type { margin-top: 10px; }
 .case-head { display: grid; gap: 6px; margin-bottom: 14px; }
+.case-head h4 { font-size: 21px; line-height: 1.3; }
 .case-head p { color: var(--muted); margin: 4px 0 0; }
 .facts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
 .facts span { font-size: 13px; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--ink); }
@@ -188,19 +200,24 @@ figcaption b { color: var(--ink); }
 .sidenav .dot { width: 9px; height: 9px; border-radius: 50%; border: 2px solid currentColor; flex: none; transition: transform 0.18s, background 0.18s; }
 .sidenav a.on { color: var(--ink); }
 .sidenav a.on .dot { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 55%, transparent); transform: scale(1.25); }
+.sidenav a.part { color: var(--ink); }
+.sidenav a.part .dot { border-color: var(--accent); }
 @media (min-width: 1360px) {
   html { scroll-padding-top: 16px; }
   .sidenav {
-    position: fixed; top: 50%; left: 24px; height: auto; transform: translateY(-50%); background: none; border: 0;
+    position: fixed; top: 50%; left: 18px; height: auto; transform: translateY(-50%); background: none; border: 0;
     backdrop-filter: none; -webkit-backdrop-filter: none;
   }
   .sidenav ul { display: block; height: auto; padding: 0; overflow: visible; }
   .sidenav li { margin: 2px 0; }
-  .sidenav a { gap: 13px; padding: 9px 12px; font-size: 15.5px; font-weight: 500; }
+  .sidenav a { gap: 11px; padding: 8px 10px; font-size: 14.5px; font-weight: 500; }
   .sidenav .dot { width: 11px; height: 11px; }
+  .sidenav li.sub a { padding: 6px 10px 6px 31px; font-size: 13.5px; }  /* a part's cases, under it */
+  .sidenav li.sub .dot { width: 8px; height: 8px; }
   .sidenav .lbl { opacity: 0.6; transition: opacity 0.15s; }
-  .banner { width: min(1040px, calc(100% - 400px)); }
-  .sidenav a:hover .lbl, .sidenav a.on .lbl { opacity: 1; }
+  .sidenav a:hover .lbl, .sidenav a.on .lbl, .sidenav a.part .lbl { opacity: 1; }
+  .banner { width: min(1040px, calc(100% - 440px)); }  /* clear of the menu (~190 px) */
+  .wide { width: min(var(--content), calc(100% - 440px)); }
 }
 
 footer { padding: 36px 0 48px; color: var(--muted); font-size: 14px; text-align: center; border-top: 1px solid var(--line); }
@@ -216,6 +233,8 @@ footer p { margin: 4px 0; }
   section { padding: 44px 0; }
   .logos { gap: 20px; }
   .sidenav a { padding: 7px 9px; font-size: 14px; gap: 7px; }
+  .group-head { gap: 12px; }
+  .group-head .num { width: 32px; height: 32px; font-size: 17px; }
   .load { top: 10px; transform: translateX(-50%); padding: 8px 12px; }  /* clear of the Drive button below */
   .load .lmsg { margin-bottom: 6px; font-size: 13px; }
   .gate small { font-size: 12px; }
