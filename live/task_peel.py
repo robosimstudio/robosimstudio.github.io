@@ -16,9 +16,10 @@ path, never edited); ``peel_fast.py`` has the measurements behind each:
   instead of resetting and replaying the routine's ~800-step hold-and-pinch. If a restore ever
   comes back unhealthy the page falls back to the original reset and pre-roll.
 
-* **the film shows**: the task draws it at 10 % opacity, tuned so the path tracer matches the real
-  clip's clear film (``rgbs/tasks/rgbs/peel/layout.py``); in the browser's raster view that is all
-  but invisible from any angle, so this page draws it at :data:`FILM_SHOWN` (``show_film``).
+* **the film shows**: the task draws it clear at 10 % opacity, tuned so the path tracer matches the
+  real clip's film (``rgbs/tasks/rgbs/peel/layout.py``); in the browser's raster view that is all but
+  invisible from any angle, so this page draws it light purple (:data:`FILM_TINT`) at
+  :data:`FILM_SHOWN`, still see-through (``show_film``).
 
 ``PEEL_PROFILE=1`` in the environment arms the studio's loop profiler and prints its table with
 every 30 s status line.
@@ -35,20 +36,28 @@ import peel_fast as pf
 
 SETUP_TEXT = "Setting up -- the robot is taking the film's tab (about a minute)..."
 """Shown while the routine's pre-roll plays: once per process now, ~50 s build + ~50 s pre-roll."""
-FILM_SHOWN = 0.35
-"""The film's opacity on this page (the panel's black block once shipped it at 0.35)."""
+FILM_TINT = (0.80, 0.70, 1.00)
+FILM_SHOWN = 0.55
+"""The film on this page: light purple, and how opaque (still see-through over the phone's black glass)."""
 
 
 def show_film() -> None:
-    """Draw the film at :data:`FILM_SHOWN` in the browser: the viewer's garment, not the scene's spec."""
+    """Draw the film light purple at :data:`FILM_SHOWN` in the browser: the viewer's garment, not the scene's spec."""
     from robosimstudio_studio.garments import ViewerStudio
 
     set0 = ViewerStudio.set_garments
     if getattr(set0, "_rsw_film", False):
         return
 
+    def film(g):
+        # The task's finish carries a diffuse map (its crinkle), and a textured GLB takes a white base
+        # colour; the garment path draws without UVs, so the map never lands and the film came out
+        # white-grey whatever its colour. Without the map, the tint is the colour.
+        finish = dataclasses.replace(g.finish, texture="") if getattr(g, "finish", None) is not None else g.finish
+        return dataclasses.replace(g, color=FILM_TINT, opacity=FILM_SHOWN, finish=finish)
+
     def set_garments(self, garments):
-        return set0(self, [dataclasses.replace(g, opacity=max(float(g.opacity), FILM_SHOWN)) if g.name == "film" else g
+        return set0(self, [film(g) if g.name == "film" else g
                            for g in garments])
 
     set_garments._rsw_film = True
