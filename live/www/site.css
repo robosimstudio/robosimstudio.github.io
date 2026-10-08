@@ -94,6 +94,7 @@ section.band { background: var(--band); }
 .tldr { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 22px 26px; box-shadow: 0 6px 20px var(--shade); }
 .tldr h2 { font-size: 22px; color: var(--accent); margin-bottom: 8px; }
 .tldr p { margin: 0; }
+.tldr .pipeline { display: block; width: 100%; aspect-ratio: 2000 / 458; margin: 4px 0 16px; border-radius: 10px; background: #fff; }  /* RSS + the real video -> the twin */
 figure { margin: 22px 0 0; }
 figure video, figure img { width: 100%; display: block; border-radius: 12px; border: 1px solid var(--line); background: #000; }
 figcaption { color: var(--muted); font-size: 14.5px; margin-top: 10px; }
