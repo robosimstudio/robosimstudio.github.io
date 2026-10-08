@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Robot Sim Studio (RSS) – Real2Sim case studies</title>
-<meta name="description" content="Robot Sim Studio (RSS): interactive multi-physics simulation for robot manipulation, with three real-to-sim case studies running live on GPUs.">
+<title>RoboSimStudio (RSS) – Real2Sim case studies</title>
+<meta name="description" content="RoboSimStudio (RSS): interactive multi-physics simulation for robot manipulation, with three real-to-sim case studies running live on GPUs.">
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
@@ -32,43 +32,35 @@
     </div>
     <div class="title">
       <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="45.5" y="2.0" width="9.0" height="15.0" rx="3" fill="currentColor"/><rect x="17.0" y="15.0" width="66.0" height="14.5" rx="3" fill="currentColor"/><path d="M34.52,30.00 L34.51,43.09 L24.38,79.01 L23.44,80.00 L19.10,79.92 L18.40,79.00 L8.27,43.09 L8.28,41.36 L16.56,40.79 L16.56,37.73 L26.79,37.73 L26.79,35.59 L24.58,35.59 L24.58,30.00 L28.34,30.00 L28.73,31.23 L28.34,32.29 L31.82,32.29 L31.43,31.23 L31.82,30.00 L34.52,30.00 Z M27.18,48.39 L15.53,48.39 L14.51,49.48 L20.32,71.09 L21.01,72.00 L22.43,71.20 L28.26,50.56 L28.13,49.09 L27.18,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M65.48,30.00 L65.49,43.09 L75.62,79.01 L76.56,80.00 L80.90,79.92 L81.60,79.00 L91.73,43.09 L91.72,41.36 L83.44,40.79 L83.44,37.73 L73.21,37.73 L73.21,35.59 L75.42,35.59 L75.42,30.00 L71.66,30.00 L71.27,31.23 L71.66,32.29 L68.18,32.29 L68.57,31.23 L68.18,30.00 L65.48,30.00 Z M72.82,48.39 L84.47,48.39 L85.49,49.48 L79.68,71.09 L78.99,72.00 L77.57,71.20 L71.74,50.56 L71.87,49.09 L72.82,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M10,93 Q50,71 90,93" fill="none" stroke="#5B3FA6" stroke-width="10.4" stroke-linecap="round"/></svg>
-      <h1>Robot Sim Studio <span class="acr">(RSS)</span></h1>
+      <h1>RoboSimStudio <span class="acr">(RSS)</span></h1>
     </div>
-    <p class="subtitle">An interactive toolkit for physics-based simulation of Robot Manipulation Tasks</p>
-    <div class="links">
-      <a class="pill primary" href="#cases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Real2Sim Case Studies &ndash; live demos</a>
-    </div>
+    <p class="subtitle">An interactive toolkit for physics-based simulation of<br>Robot Manipulation Tasks</p>
   </div>
 </header>
 
 <div class="banner" aria-label="The three case studies">
-  <div class="row">
-    <a class="tile" href="#bar" aria-label="Wipe the bar"><video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video></a>
-    <a class="tile" href="#peel" aria-label="Peel the film"><video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video></a>
-    <a class="tile" href="#cable" aria-label="Route the cable"><video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video></a>
+  <div class="frame">
+    <div class="head"><a class="pill primary" href="#intro"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Real2Sim Case Studies &ndash; live demos</a></div>
+    <div class="row">
+      <a class="tile" href="#bar" aria-label="Wipe the bar"><video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video></a>
+      <a class="tile" href="#peel" aria-label="Peel the film"><video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video></a>
+      <a class="tile" href="#cable" aria-label="Route the cable"><video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video></a>
+    </div>
   </div>
 </div>
 
-<section id="tldr">
+<section id="intro">
   <div class="wrap">
     <div class="tldr">
-      <h2>TL;DR</h2>
-      <p><b>Robot Sim Studio (RSS)</b> is a toolkit for building interactive physics simulations of robot manipulation on Newton, GPU physics
-        on Warp and CUDA. Rigid parts, cables, cloth and foam share one scene, each on a solver named in data, and anything in it can be
-        grabbed and dragged in a browser while it runs. A live page rebuilds a scene file on every save, so a coding agent can turn a photo
-        or a clip of a real bench into a simulated twin, one save at a time.</p>
+      <h2>Real2Sim Case Studies</h2>
+      <p>Each demo below is the live simulation, embedded. Press <b>Drive the robot</b> to take the robot's hand; until then the
+      page scrolls past it. Until someone grabs it, each robot runs a preprogrammed motion; the hand turns blue while a person drives.
+      One person drives at a time and everyone else watches the same simulation. On a phone the demo opens full screen.</p>
     </div>
   </div>
 </section>
 
 <section class="band" id="cases">
-  <div class="wrap">
-    <h2>Real2Sim Case Studies</h2>
-    <p class="lede">Each demo below is the live simulation, embedded. Press <b>Drive the robot</b> to take the robot's hand; until then the
-      page scrolls past it. Until someone grabs it, each robot runs a preprogrammed motion; the hand turns blue while a person drives.
-      One person drives at a time and everyone else watches the same simulation. On a phone the demo opens full screen.</p>
-  </div>
-
   <div class="group" id="real">
     <div class="wrap group-head">
       <span class="num">1</span>
@@ -197,7 +189,7 @@
 
 <footer>
   <div class="wrap">
-    <p><b>Robot Sim Studio (RSS)</b> · AUTOLab, UC Berkeley · NVIDIA</p>
+    <p><b>RoboSimStudio (RSS)</b> · AUTOLab, UC Berkeley · NVIDIA</p>
     <p>The three demos run live on this server's GPUs, one driver at a time.</p>
   </div>
 </footer>
