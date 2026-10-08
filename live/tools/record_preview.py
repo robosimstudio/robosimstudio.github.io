@@ -228,6 +228,12 @@ with sync_playwright() as pw:
     cast = Cast(page)
     page.goto(URL, wait_until="load")
     wait(cast, 6.0)
+    for _ in range(120):  # until this page's probe reports a viewer: the page may be slow, or not the probed one
+        if probe().get("cams"):
+            break
+        wait(cast, 0.5)
+    else:
+        raise SystemExit(f"{PROBE} reports no viewer: is {URL} the page started with this RSW_PROBE (another may hold the port)?")
     page.add_style_tag(content=HIDE)
     zoom = frame_view(page, cast)
     if STILL:

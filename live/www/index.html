@@ -84,7 +84,7 @@
     <div class="wrap pair">
       <figure>
         <video src="video/bar_real.mp4" poster="video/bar_real.jpg" muted loop playsinline autoplay preload="metadata"></video>
-        <figcaption><b>The real task.</b> The robot clip this case study recreates (2× speed).</figcaption>
+        <figcaption><b>The real task.</b> The real robots wiping the bar: the scene this case study recreates.</figcaption>
       </figure>
       <figure>
         <video src="video/bar_gen.mp4" poster="video/bar_gen.jpg" muted loop playsinline autoplay preload="metadata"></video>
@@ -132,6 +132,13 @@
       <p>A 45 cm, 5 mm cable runs from a socket; lay it into three Y-prong clips. The cable is SuperDex's Cosserat rod, and every rigid shape it
         can touch is mirrored into SuperDex, so the cable feels the arm, the bench and the clips that Newton simulates. The hand holds the
         cable's end with node constraints re-aimed every substep.</p>
+      <p><b>Where it comes from.</b> The routing task is one of RoboSimStudio's pre-built cable tasks, set here in the workcell
+        rebuilt from the wipe's real video: the same bench, mat and slat wall. The cable is SuperDex's Cosserat rod, a centerline
+        with a twist at every node, stiff in bending and in stretch the way a jacketed cable is, so it drapes, slides and catches on
+        the prongs through contact and friction alone.</p>
+      <p><b>Other uses.</b> A rod is one spec in RoboSimStudio (<code>rss.rod</code>), served by SuperDex here and by Newton's VBD
+        elsewhere: its other cable tasks weave a cable through a row of pegs and plug its free end into a port, wind it around
+        spools and cleats, and feed it through a cable box's channel. The same pieces fit hoses, ropes and wire harnesses.</p>
       <div class="facts"><span>Franka Panda</span><span>Cable: SuperDex Cosserat rod</span><span>Arm, bench, clips: Newton (MuJoCo)</span></div>
     </div>
     <div class="wide stage">
