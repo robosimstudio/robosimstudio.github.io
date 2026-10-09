@@ -172,9 +172,16 @@ figcaption b { color: var(--ink); }
 .live.full .tools .note, .live.full .tools .spacer, .live.full .tools .close, .live.full .tools a { display: none; }
 
 /* the real task and how the scene was generated */
-.pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
-.pair figure { margin: 0; }
-.pair video { aspect-ratio: 16 / 9; object-fit: contain; background: #0d0d10; }
+/* how the bar was generated, the full row, with the real task over its top-left corner */
+.pip { margin-top: 16px; }
+.pip figure { margin: 0; }
+.pipbox { position: relative; }
+.pipbox .main { aspect-ratio: 1092 / 960; background: #fff; }
+.pipbox .inset {
+  position: absolute; left: 0; top: 0; margin: 2% 0 0 2%;  /* % margins both follow the width: an even inset */
+  width: 36%; aspect-ratio: 16 / 9; object-fit: cover;
+  border: 2px solid #fff; border-radius: 8px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+}
 
 /* ---- the section menu: always there, the section in view marked */
 .sidenav {
@@ -224,7 +231,7 @@ footer p { margin: 4px 0; }
   .banner .lead { margin-bottom: 12px; }
   .banner .pipeline { padding: 6px; margin-bottom: 14px; }
   .banner .note { font-size: 15px; padding: 0 9px; }
-  .pair { grid-template-columns: minmax(0, 1fr); }
+  .pipbox .inset { width: 44%; border-width: 1.5px; border-radius: 6px; }
   section { padding: 44px 0; }
   .logos { gap: 20px; }
   .sidenav a { padding: 7px 9px; font-size: 14px; gap: 7px; }
