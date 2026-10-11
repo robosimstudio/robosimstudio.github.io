@@ -4,9 +4,10 @@
 The gateway once sent these with no Cache-Control, so a browser kept an old ``site.css`` under a new
 ``index.html`` (10-08: the section menu came out unstyled, the old white box behind the logos). A
 stamped URL changes whenever the file does, so no cache can pair a page with yesterday's files.
-Run by ``up.sh`` on the published copy (``$RSW_LIVE/www/index.html``), never on the repo's.
+Run by the Pages workflow (``.github/workflows/pages.yml``) on its checkout of ``www/`` just
+before upload, never on the repo's own copy.
 
-    python3 live/stamp.py ~/rss_ws/rsw_live/www
+    python3 scripts/stamp.py www
 """
 
 import hashlib

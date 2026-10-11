@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
-# Build the site and publish it to GitHub Pages as a single orphan commit on gh-pages.
+# Build the drag demos (site/) and push them as a single orphan commit on gh-pages.
+#
+# NOTE: GitHub Pages for this repo is published from www/ by .github/workflows/pages.yml. A
+# gh-pages branch pushed here is not served until the Pages source is switched to it.
 #
 #   scripts/deploy.sh            # from the repo root; main must be committed and clean
 #
@@ -9,7 +12,7 @@
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 DATA="${RSS_DATA_DIR:-$REPO_DIR/build/site-data}"
-REMOTE="${DEPLOY_REMOTE:-https://github.com/KeplerC/robosimstudio-website.git}"
+REMOTE="${DEPLOY_REMOTE:-https://github.com/robosimstudio/robosimstudio.github.io.git}"
 CACHE="${DEPLOY_CACHE:-$HOME/.cache/rsw-deploy}"
 
 cd "$REPO_DIR"

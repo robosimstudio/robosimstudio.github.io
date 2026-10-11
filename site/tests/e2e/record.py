@@ -6,7 +6,7 @@ own recorder is a sub-megabit VP8 stream). Headless Chromium draws no pointer, s
 injects a faint ring that follows it (the page itself has none).
 
     ~/rss_ws/trailer/.venv-tools/bin/python site/tests/e2e/record.py \\
-        --url https://keplerc.github.io/robosimstudio-website/ --out /tmp/rsw_visit
+        --url http://127.0.0.1:5173/robosimstudio-website/ --out /tmp/rsw_visit
 """
 
 from __future__ import annotations
@@ -157,7 +157,7 @@ def center(page, sel: str) -> tuple[float, float]:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser()
-    p.add_argument("--url", default="https://keplerc.github.io/robosimstudio-website/")
+    p.add_argument("--url", default="http://127.0.0.1:5173/robosimstudio-website/")
     p.add_argument("--out", default="/tmp/rsw_visit")
     p.add_argument("--tour", action="store_true", help="every free drag, then two rollouts")
     p.add_argument("--orbit", action="store_true", help="look around: orbit, drag from there, glide home")

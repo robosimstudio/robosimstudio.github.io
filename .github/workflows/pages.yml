@@ -1,0 +1,31 @@
+# Publish www/ to GitHub Pages at https://robosimstudio.github.io/ on every push to main.
+# scripts/stamp.py gives every file link a content hash first, so no browser cache pairs a new
+# page with an old stylesheet, script or clip.
+name: pages
+on:
+  push:
+    branches: [main]
+    paths: [www/**, scripts/stamp.py, .github/workflows/pages.yml]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: true
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 scripts/stamp.py www
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: www
+      - id: deployment
+        uses: actions/deploy-pages@v4
