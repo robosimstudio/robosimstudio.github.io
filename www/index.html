@@ -42,6 +42,16 @@
 <section class="flow" id="workflow" data-step="1">
   <div class="sticky">
     <div class="wide">
+
+      <div class="lead" aria-live="polite">
+        <p data-step="1"><b>RoboSimStudio</b> takes a smartphone video of a robot performing a task, here wiping a bar with a sponge, and a one-line prompt to a coding agent.</p>
+        <p data-step="2">A Claude or Codex agent builds the simulation from the video: the scene, the camera and the physics, in about an hour (Real2Sim).</p>
+        <p data-step="3">The output is a multi-physics simulation: rigid bodies in Newton coupled with the FEM sponge in SuperDex, which humans and agents inspect and tune until it matches the video.</p>
+        <p data-step="4">Interact with the simulation live on a GPU: drag the orange ball to move the arm, drag empty space to orbit, or pick another task from the snapshots.</p>
+        <p data-step="5">Varied in its physical parameters and layout, the simulation improves a policy from feedback, and the policy runs on the real robot (Sim2Real).</p>
+      </div>
+
+      <div class="board">
       <ol class="rail" aria-label="Steps">
         <li><button type="button" data-step="1" aria-current="step"><i><span>1</span></i><b>Input</b></button></li>
         <li><button type="button" data-step="2"><i><span>2</span></i><b>Coding agent</b></button></li>
@@ -49,8 +59,6 @@
         <li class="fire"><button type="button" data-step="4"><i><span>4</span></i><b>Drive it yourself&nbsp;🔥</b></button></li>
         <li><button type="button" data-step="5"><i><span>5</span></i><b>Sim2Real</b></button></li>
       </ol>
-
-      <div class="board">
         <div class="stage" id="stage">
           <figure class="panel on" data-step="1">
             <span class="corner at" data-ref="clip">@wipe_the_bar.mov</span>
@@ -92,12 +100,11 @@
           <button type="button" role="tab" data-demo="peel" aria-selected="false"><img src="video/peel.jpg" alt=""><span>Peel the film</span></button>
           <button type="button" role="tab" data-demo="cable" aria-selected="false"><img src="video/cable.jpg" alt=""><span>Route the cable</span></button>
         </div>
-      </div>
-
-      <div class="under">
-        <div class="tools" data-step="4"><i class="dot" data-status="bar"></i><span class="note">Live simulation</span>
-          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
-        <button class="pill primary next" type="button" id="next"><span>Next: the coding agent at work</span>&nbsp;&#8594;</button>
+        <div class="under">
+          <div class="tools" data-step="4"><i class="dot" data-status="bar"></i><span class="note">Live simulation</span>
+            <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
+          <button class="pill primary next" type="button" id="next"><span>Next: the coding agent at work</span>&nbsp;&#8594;</button>
+        </div>
       </div>
     </div>
   </div>

@@ -3,7 +3,8 @@
 The RoboSimStudio project page, published by GitHub Pages at <https://robosimstudio.github.io/>.
 
 The page (`www/`) is static: the title, authors and logos; the Real2Sim workflow as five steps on one
-stage that sticks while the page scrolls through them (the input clip with the prompt to a coding agent,
+stage that sticks while the page scrolls through them, with a one-sentence lead above and the step rail down
+the left (the input clip with the prompt to a coding agent,
 the agent at work, the simulation it produced under a slider between its two views, that simulation live to
 drive, with snapshots to pick which task: wipe the bar, peel the film, route the cable, and the real robot
 running it); and the gallery. The simulations
