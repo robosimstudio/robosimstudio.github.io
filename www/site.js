@@ -12,7 +12,7 @@
 // - The loading bar fills on the frame's load event, and completes when the page in the frame
 //   posts {rsw: "ready"} (pages.ready_ping: once this viewer's scene has been sent).
 (() => {
-  const HOST = /sslip\.io$/.test(location.hostname) ? location.hostname : "95-133-252-186.sslip.io";
+  const HOST = "64-247-206-118.sslip.io";  // the GPU box behind the live demos (demo/up.sh, RSW_HOST)
   const url = (id) => `https://${id}.${HOST}/`;
   const RELEASE_MS = 20000, SLOW_MS = 20000;
   const small = () => matchMedia("(pointer: coarse), (max-width: 760px)").matches;
