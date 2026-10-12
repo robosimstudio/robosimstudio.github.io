@@ -175,7 +175,7 @@
   }
 
   // ---- the stage: five steps, one showing. The section is tall and its content sticks, so scrolling down
-  // walks through the steps; the rail, the arrows and the Next button scroll the page to a step's place.
+  // walks through the steps; the rail and the Next button scroll the page to a step's place.
   const flow = $(document, "#workflow"), stage = $(document, "#stage");
   const panels = [...stage.querySelectorAll(".panel")], steps = [...document.querySelectorAll(".rail [data-step]")];
   const next = $(document, "#next");
@@ -214,8 +214,6 @@
   addEventListener("resize", onScroll);
   for (const t of steps) t.addEventListener("click", () => goTo(+t.dataset.step));
   next.addEventListener("click", () => goTo(step + 1));
-  $(stage, ".arrow.next").addEventListener("click", () => goTo(step + 1));
-  $(stage, ".arrow.prev").addEventListener("click", () => goTo(step - 1));
   addEventListener("keydown", (e) => {
     if (e.target.closest("input, textarea, iframe") || b.classList.contains("active")) return;
     if (e.key === "ArrowRight") goTo(step + 1);
