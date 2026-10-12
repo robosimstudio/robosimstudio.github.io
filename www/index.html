@@ -3,168 +3,126 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>RoboSimStudio (RSS) – Real2Sim case studies</title>
-<meta name="description" content="RoboSimStudio (RSS): interactive multi-physics simulation for robot manipulation, with three real-to-sim case studies running live on GPUs.">
+<title>RoboSimStudio</title>
+<meta name="description" content="RoboSimStudio: an open interactive toolkit that accelerates human and agentic physics-based Real2Sim of robot manipulation tasks.">
 <link rel="stylesheet" href="site.css">
 </head>
 <body>
 
-<nav class="sidenav" aria-label="Sections">
-  <ul>
-    <li><a href="#overview"><span class="dot"></span><span class="lbl">Overview</span></a></li>
-    <li><a href="#real"><span class="dot"></span><span class="lbl">Real video to RSS</span></a></li>
-    <li class="sub"><a href="#bar" data-part="real"><span class="dot"></span><span class="lbl">Wipe the bar</span></a></li>
-    <li class="sub"><a href="#peel" data-part="real"><span class="dot"></span><span class="lbl">Peel the film</span></a></li>
-    <li><a href="#extend"><span class="dot"></span><span class="lbl">Other deformables</span></a></li>
-    <li class="sub"><a href="#cable" data-part="extend"><span class="dot"></span><span class="lbl">Route the cable</span></a></li>
-  </ul>
-</nav>
-
-<header class="hero" id="overview">
-  <div class="collage" aria-hidden="true">
-    <img src="video/bar.jpg" alt=""><img src="video/peel.jpg" alt=""><img src="video/cable.jpg" alt="">
-  </div>
+<!-- title, authors -->
+<header class="hero" id="top">
   <div class="wrap">
+    <h1>RoboSimStudio</h1>
+    <h2 class="subtitle">An open interactive toolkit that accelerates human and agentic <br>physics-based Real2Sim of Robot Manipulation Tasks</h2>
+    <p class="authors">
+      <span>Kaiyuan Chen<sup>1*</sup></span>, <span>Shuangyu Xie<sup>1*</sup></span>, <span>Uksang Yoo<sup>1</sup></span>, <span>Xinyue Zhu<sup>1</sup></span>,
+      <span>Cael Magner<sup>1</sup></span>, <span>Alvin Zhu<sup>1</sup></span>, <span>Daehwa Kim<sup>1</sup></span>, <span>Eric Heiden<sup>2</sup></span>,
+      <span>Erwin Coumans<sup>2</sup></span>, <span>Miles Macklin<sup>2</sup></span>, <span>Spencer Huang<sup>2</sup></span>, <span>Ken Goldberg<sup>1</sup></span>
+    </p>
+    <p class="affils"><span><sup>1</sup>University of California, Berkeley</span> · <span><sup>2</sup>NVIDIA</span> · <span><sup>*</sup>Equal contribution</span></p>
+    <div class="links">
+      <!-- TODO: paper link (arXiv) once public -->
+      <a class="pill primary" href="#" aria-disabled="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10H3z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7.5h5M5.5 10h5M5.5 12.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Paper</a>
+      <a class="pill" href="https://github.com/KeplerC/robosimstudio" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .5a7.5 7.5 0 0 0-2.37 14.62c.37.07.51-.16.51-.36v-1.3c-2.09.45-2.53-1-2.53-1-.34-.86-.83-1.09-.83-1.09-.68-.47.05-.46.05-.46.75.05 1.15.78 1.15.78.67 1.15 1.76.82 2.19.63.07-.49.26-.82.48-1.01-1.67-.19-3.42-.84-3.42-3.71 0-.82.29-1.49.77-2.02-.08-.19-.34-.95.07-1.98 0 0 .63-.2 2.06.77a7.1 7.1 0 0 1 3.76 0c1.43-.97 2.06-.77 2.06-.77.41 1.03.15 1.79.07 1.98.48.53.77 1.2.77 2.02 0 2.88-1.75 3.51-3.42 3.7.27.23.51.69.51 1.39v2.06c0 .2.14.44.52.36A7.5 7.5 0 0 0 8 .5z" fill="currentColor"/></svg>Code</a>
+      <a class="pill" href="#gallery"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9.5" y="1.5" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="1.5" y="9.5" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Real2Sim examples</a>
+      <a class="pill fire" href="#demo=bar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Interactive demo&nbsp;🔥</a>
+    </div>
     <div class="logos">
-      <a href="https://autolab.berkeley.edu/" target="_blank" rel="noopener"><picture><source srcset="logos/autolab-dark.png" media="(prefers-color-scheme: dark)"><img class="autolab" src="logos/autolab.png" alt="AUTOLab"></picture></a>
-      <a href="https://www.berkeley.edu/" target="_blank" rel="noopener"><picture><source srcset="logos/berkeley-dark.svg" media="(prefers-color-scheme: dark)"><img class="berkeley" src="logos/berkeley.svg" alt="UC Berkeley"></picture></a>
-      <a href="https://www.nvidia.com/" target="_blank" rel="noopener"><picture><source srcset="logos/nvidia-dark.svg" media="(prefers-color-scheme: dark)"><img class="nvidia" src="logos/nvidia.svg" alt="NVIDIA"></picture></a>
+      <a href="https://autolab.berkeley.edu/" target="_blank" rel="noopener"><img class="autolab" src="logos/autolab.png" alt="AUTOLab"></a>
+      <a href="https://www.berkeley.edu/" target="_blank" rel="noopener"><img class="berkeley" src="logos/berkeley.svg" alt="UC Berkeley"></a>
+      <a href="https://www.nvidia.com/" target="_blank" rel="noopener"><img class="nvidia" src="logos/nvidia.svg" alt="NVIDIA"></a>
     </div>
-    <div class="title">
-      <svg viewBox="0 0 100 100" aria-hidden="true"><rect x="45.5" y="2.0" width="9.0" height="15.0" rx="3" fill="currentColor"/><rect x="17.0" y="15.0" width="66.0" height="14.5" rx="3" fill="currentColor"/><path d="M34.52,30.00 L34.51,43.09 L24.38,79.01 L23.44,80.00 L19.10,79.92 L18.40,79.00 L8.27,43.09 L8.28,41.36 L16.56,40.79 L16.56,37.73 L26.79,37.73 L26.79,35.59 L24.58,35.59 L24.58,30.00 L28.34,30.00 L28.73,31.23 L28.34,32.29 L31.82,32.29 L31.43,31.23 L31.82,30.00 L34.52,30.00 Z M27.18,48.39 L15.53,48.39 L14.51,49.48 L20.32,71.09 L21.01,72.00 L22.43,71.20 L28.26,50.56 L28.13,49.09 L27.18,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M65.48,30.00 L65.49,43.09 L75.62,79.01 L76.56,80.00 L80.90,79.92 L81.60,79.00 L91.73,43.09 L91.72,41.36 L83.44,40.79 L83.44,37.73 L73.21,37.73 L73.21,35.59 L75.42,35.59 L75.42,30.00 L71.66,30.00 L71.27,31.23 L71.66,32.29 L68.18,32.29 L68.57,31.23 L68.18,30.00 L65.48,30.00 Z M72.82,48.39 L84.47,48.39 L85.49,49.48 L79.68,71.09 L78.99,72.00 L77.57,71.20 L71.74,50.56 L71.87,49.09 L72.82,48.39 Z" fill="currentColor" fill-rule="evenodd"/><path d="M10,93 Q50,71 90,93" fill="none" stroke="#5B3FA6" stroke-width="10.4" stroke-linecap="round"/></svg>
-      <h1>RoboSimStudio <span class="acr">(RSS)</span></h1>
-    </div>
-    <p class="subtitle">An interactive toolkit for physics-based simulation of<br>Robot Manipulation Tasks</p>
+    <!-- the teaser, 56 s -->
+    <div class="card teaser"><video src="video/teaser.mp4" poster="video/teaser.jpg" controls muted loop playsinline autoplay preload="metadata"></video></div>
   </div>
 </header>
 
-<div class="banner" aria-label="The three case studies">
-  <div class="pipeline"><video src="video/real2sim.mp4" poster="video/real2sim.jpg" muted loop playsinline autoplay
-    aria-label="RoboSimStudio plus a video of the real robot task gives its twin in RoboSimStudio"></video></div>
-  <div class="lead"><a class="pill primary" href="#cases"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" fill="currentColor"/></svg>Real2Sim Case Studies &ndash; live demos</a></div>
-  <div class="frame">
-    <div class="row">
-      <a class="tile" href="#bar" aria-label="Wipe the bar"><video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video></a>
-      <a class="tile" href="#peel" aria-label="Peel the film"><video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video></a>
-      <a class="tile" href="#cable" aria-label="Route the cable"><video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video></a>
+<!-- the workflow: five steps on one stage that sticks while the page scrolls through them: the input clip with the
+     prompt to the coding agent, the agent at work, the simulation it produced, that simulation live to drive, and the real robot running it -->
+<section class="flow" id="workflow" data-step="1">
+  <div class="sticky">
+    <div class="wide">
+      <ol class="rail" aria-label="Steps">
+        <li><button type="button" data-step="1" aria-current="step"><i><span>1</span></i><b>Input</b></button></li>
+        <li><button type="button" data-step="2"><i><span>2</span></i><b>Coding agent</b></button></li>
+        <li><button type="button" data-step="3"><i><span>3</span></i><b>Simulation</b></button></li>
+        <li class="fire"><button type="button" data-step="4"><i><span>4</span></i><b>Drive it yourself&nbsp;🔥</b></button></li>
+        <li><button type="button" data-step="5"><i><span>5</span></i><b>Sim2Real</b></button></li>
+      </ol>
+
+      <div class="board">
+        <div class="stage" id="stage">
+          <figure class="panel on" data-step="1">
+            <span class="corner at" data-ref="clip">@wipe_the_bar.mov</span>
+            <video src="video/bar_real.mp4" poster="video/bar_real.jpg" muted loop playsinline preload="metadata"></video>
+            <div class="prompt" id="prompt">
+              <span class="chip">PROMPT</span>
+              <span class="ptext mono"><span class="typed" id="typed"></span><span class="cursor" aria-hidden="true"></span></span>
+              <template id="prompt-src">Set up <a href="https://github.com/KeplerC/robosimstudio" target="_blank" rel="noopener">github.com/KeplerC/robosimstudio</a> and create a simulation for <span class="at" data-ref="clip">@wipe_the_bar.mov</span></template>
+            </div>
+          </figure>
+          <figure class="panel fit" data-step="2">
+            <span class="corner">CODING AGENT</span>
+            <video src="video/bar_gen.mp4" poster="video/bar_gen.jpg" muted loop playsinline preload="metadata"></video>
+          </figure>
+          <figure class="panel cmp" data-step="3" style="--x: 50%">
+            <video src="video/bar_out.mp4" poster="video/bar_out.jpg" muted loop playsinline preload="metadata"></video>
+            <div class="over"><video src="video/bar_mech.mp4" poster="video/bar_mech.jpg" muted loop playsinline preload="metadata"></video></div>
+            <span class="corner">NEWTON · PATH TRACED</span>
+            <span class="corner right">MULTIPHYSICS</span>
+            <div class="handle" aria-hidden="true"><i>&#8596;</i></div>
+            <input class="slide" type="range" min="0" max="100" value="50" aria-label="Slide between the path-traced and the multiphysics view">
+          </figure>
+          <div class="panel live" data-step="4" data-id="bar" data-title="Wipe the bar">
+            <div class="screen">
+              <video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline preload="metadata"></video>
+              <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
+              <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span></button>
+            </div>
+          </div>
+          <figure class="panel" data-step="5">
+            <span class="corner">REAL ROBOT</span>
+            <video src="video/bar_deploy.mp4" poster="video/bar_deploy.jpg" muted loop playsinline preload="metadata"></video>
+          </figure>
+          <button class="arrow prev" type="button" aria-label="Previous step">&#8249;</button>
+          <button class="arrow next" type="button" aria-label="Next step">&#8250;</button>
+        </div>
+        <div class="thumbs" role="tablist" aria-label="Choose a task">
+          <button type="button" role="tab" data-demo="bar" aria-selected="true"><img src="video/bar.jpg" alt=""><span>Wipe the bar</span></button>
+          <button type="button" role="tab" data-demo="peel" aria-selected="false"><img src="video/peel.jpg" alt=""><span>Peel the film</span></button>
+          <button type="button" role="tab" data-demo="cable" aria-selected="false"><img src="video/cable.jpg" alt=""><span>Route the cable</span></button>
+        </div>
+      </div>
+
+      <div class="under">
+        <div class="tools" data-step="4"><i class="dot" data-status="bar"></i><span class="note">Live simulation</span>
+          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
+        <button class="pill primary next" type="button" id="next"><span>Next: the coding agent at work</span>&nbsp;&#8594;</button>
+      </div>
     </div>
   </div>
-  <p class="note">This page shows three Real2Sim cases: <b>A.</b> Wipe the bar, <b>B.</b> Peel the film and <b>C.</b> Route the cable.
-    The first two are transferred directly from real tasks; the third extends a pre-constructed task by combining it with the
-    Real2Sim workcell. Try controlling the robot, and test its contact and deformation.</p>
-</div>
+</section>
 
-<section class="band" id="cases">
-  <div class="group" id="real">
-    <div class="wrap group-head">
-      <span class="num">1</span>
-      <div><h3>Convert the real video to RSS</h3>
-        <p>Two tasks rebuilt in RSS from videos of the real robot: wiping a grab bar and peeling the film off a phone.</p></div>
-    </div>
-  <article class="case" id="bar">
-    <div class="wrap case-head">
-      <span class="eyebrow">1.1 · Contact-rich wiping</span>
-      <h4>Wipe the bar</h4>
-      <p>A chrome grab bar bolted into two black blocks, a blue marker stripe along its crown, and a kitchen sponge. The right arm presses
-        and wipes while the left arm steadies the bar. The stripe comes off through a removal field fed by the sponge's own contact patch,
-        so only real pressure cleans. The scene is the twin of a real clip, rebuilt by a coding agent.</p>
-      <div class="facts"><span>Bimanual i2rt YAM</span><span>Arms and bar: Newton (MuJoCo)</span><span>Sponge: SuperDex FEM foam</span><span>Twin of a real clip</span></div>
-    </div>
-    <div class="wide stage">
-      <div class="live" data-id="bar" data-title="Wipe the bar">
-        <div class="screen">
-          <video src="video/bar.mp4" poster="video/bar.jpg" muted loop playsinline autoplay></video>
-          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
-        </div>
-        <div class="tools"><i class="dot" data-status="bar"></i><span class="note">Live simulation</span><span class="spacer"></span>
-          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
-        <p class="viewhint"><b>Viewing angle:</b> after pressing <i>Drive the robot</i>, drag empty space to turn the view, right-drag
-          (two fingers on a touchscreen) to pan, and scroll (pinch) to zoom. <i>Reset view</i> in the panel brings the camera back.</p>
-      </div>
-    </div>
-    <div class="wide pip">
-      <figure>
-        <div class="pipbox">
-          <video class="main" src="video/bar_gen.mp4" poster="video/bar_gen.jpg" muted loop playsinline autoplay preload="metadata"></video>
-          <video class="inset" src="video/bar_real.mp4" poster="video/bar_real.jpg" muted loop playsinline autoplay preload="metadata"
-            aria-label="The real task"></video>
-        </div>
-        <figcaption><b>How it was generated.</b> A coding agent building this scene in RSS's live page, about an hour of work sped up:
-          the arms, the bench, the lab, then the photo camera matched to the clip. <b>Top left, the real task:</b> the real robots
-          wiping the bar, the scene this case study recreates.</figcaption>
-      </figure>
-    </div>
-  </article>
-
-  <article class="case" id="peel">
-    <div class="wrap case-head">
-      <span class="eyebrow">1.2 · Adhesive peeling</span>
-      <h4>Peel the film</h4>
-      <p>The protective film on a phone, held down by a field of adhesive bonds after AutoPeel (ICRA 2025). The left hand holds the phone;
-        the right has the film's tab and pulls it along the peel arc. Each bond lets go when it is stretched past its limit, one row at a
-        time.</p>
-      <div class="facts"><span>Bimanual i2rt YAM</span><span>Film: Newton VBD cloth</span><span>Arms: Newton (MuJoCo), one-way coupled</span><span>Staged from a real clip</span></div>
-    </div>
-    <div class="wide stage">
-      <div class="live" data-id="peel" data-title="Peel the film">
-        <div class="screen">
-          <video src="video/peel.mp4" poster="video/peel.jpg" muted loop playsinline autoplay></video>
-          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
-        </div>
-        <div class="tools"><i class="dot" data-status="peel"></i><span class="note">Live simulation</span><span class="spacer"></span>
-          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
-        <p class="viewhint"><b>Viewing angle:</b> after pressing <i>Drive the robot</i>, drag empty space to turn the view, right-drag
-          (two fingers on a touchscreen) to pan, and scroll (pinch) to zoom. <i>Reset view</i> in the panel brings the camera back.</p>
-      </div>
-    </div>
-  </article>
-  </div>
-
-  <div class="group" id="extend">
-    <div class="wrap group-head">
-      <span class="num">2</span>
-      <div><h3>Extend the scenario to other deformable objects</h3>
-        <p>The same toolkit on a deformable the videos don't show: a cable laid into clips.</p></div>
-    </div>
-  <article class="case" id="cable">
-    <div class="wrap case-head">
-      <span class="eyebrow">2.1 · Cable routing</span>
-      <h4>Route the cable</h4>
-      <p>A 45 cm, 5 mm cable runs from a socket; lay it into three Y-prong clips. The cable is SuperDex's Cosserat rod, and every rigid shape it
-        can touch is mirrored into SuperDex, so the cable feels the arm, the bench and the clips that Newton simulates. The hand holds the
-        cable's end with node constraints re-aimed every substep.</p>
-      <p><b>Where it comes from.</b> The routing task is one of RoboSimStudio's pre-built cable tasks, set here in the workcell
-        rebuilt from the wipe's real video: the same bench, mat and slat wall. The cable is SuperDex's Cosserat rod, a centerline
-        with a twist at every node, stiff in bending and in stretch the way a jacketed cable is, so it drapes, slides and catches on
-        the prongs through contact and friction alone.</p>
-      <p><b>Other uses.</b> A rod is one spec in RoboSimStudio (<code>rss.rod</code>), served by SuperDex here and by Newton's VBD
-        elsewhere: its other cable tasks weave a cable through a row of pegs and plug its free end into a port, wind it around
-        spools and cleats, and feed it through a cable box's channel. The same pieces fit hoses, ropes and wire harnesses.</p>
-      <div class="facts"><span>Franka Panda</span><span>Cable: SuperDex Cosserat rod</span><span>Arm, bench, clips: Newton (MuJoCo)</span></div>
-    </div>
-    <div class="wide stage">
-      <div class="live" data-id="cable" data-title="Route the cable">
-        <div class="screen">
-          <video src="video/cable.mp4" poster="video/cable.jpg" muted loop playsinline autoplay></video>
-          <div class="load"><p class="lmsg">Connecting…</p><div class="lbar"><i></i></div></div>
-          <button class="gate" type="button"><span>&#9654;&nbsp; Drive the robot</span><small>It moves by itself until you grab it. Blue hand = you're driving.</small></button>
-        </div>
-        <div class="tools"><i class="dot" data-status="cable"></i><span class="note">Live simulation</span><span class="spacer"></span>
-          <button class="close" type="button">Let go</button><button class="expand" type="button">Full screen</button><a class="open" target="_blank" rel="noopener">Open in a tab &#8599;</a></div>
-        <p class="viewhint"><b>Viewing angle:</b> after pressing <i>Drive the robot</i>, drag empty space to turn the view, right-drag
-          (two fingers on a touchscreen) to pan, and scroll (pinch) to zoom. <i>Reset view</i> in the panel brings the camera back.</p>
-      </div>
-    </div>
-  </article>
+<!-- gallery -->
+<section class="gallery" id="gallery">
+  <div class="wide">
+    <h2>Real2Sim examples</h2>
+    <div class="card"><video src="video/gallery.mp4" poster="video/gallery.jpg" muted loop playsinline autoplay preload="metadata"></video></div>
   </div>
 </section>
 
 <footer>
   <div class="wrap">
-    <p><b>RoboSimStudio (RSS)</b> · AUTOLab, UC Berkeley · NVIDIA</p>
-    <p>The three demos run live on this server's GPUs, one driver at a time.</p>
+    <p>Open source under the <a href="https://github.com/KeplerC/robosimstudio/blob/main/LICENSE" target="_blank" rel="noopener">Apache 2.0 license</a>.</p>
+    <div class="cite">
+      <div class="cite-bar"><span>Citation</span><button class="copy" type="button">Copy</button></div>
+<!-- TODO: venue and URL once the paper is public -->
+<pre id="bibtex">@article{chen2026robosimstudio,
+  title   = {RoboSimStudio: An Interactive Toolkit for Rapid Real2Sim of Robot Manipulation Tasks},
+  author  = {Chen, Kaiyuan and Xie, Shuangyu and Yoo, Uksang and Zhu, Xinyue and Magner, Cael and Zhu, Alvin and Kim, Daehwa and Heiden, Eric and Coumans, Erwin and Macklin, Miles and Huang, Spencer and Goldberg, Ken},
+  year    = {2026}
+}</pre>
+    </div>
   </div>
 </footer>
 
