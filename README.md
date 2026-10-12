@@ -15,7 +15,7 @@ themselves, the HTTPS gateway in front of them and the supervisors that keep the
 Clips under `www/video/`: `teaser` (from `~/rss_ws/teaser/out/rss_teaser.mp4`), `bar_real` / `bar_gen` / `bar_out` / `bar_mech` / `bar_deploy`
 (the workflow: the phone video, the agent's hour as the 40x timelapse with its timer overlay from
 `~/rss_ws/agentic surface cleaning - timelapse.mp4`, the path-traced twin and the multiphysics view from
-`~/rss_ws/teaser/takes/bar_rtx.mp4` and `s05b_mech.mp4`, the real robot rollout from `~/rss_ws/IMG_8647-2_2.5x 2.MOV`, 7.0 to 9.3 s and 10.8 to 21.5 s joined),
+`~/rss_ws/teaser/takes/bar_rtx.mp4` and `bar_mech.mp4` (frame-aligned, so the slider compares the same instant), the real robot rollout from `~/rss_ws/IMG_8647-2_2.5x 2.MOV`, 7.0 to 9.3 s and 10.8 to 21.5 s joined),
 `bar` / `peel` / `cable` (the live block's posters), `gallery` (from `~/rss_ws/gallery/wall/task_wall_1080p.mp4`).
 New clips: 1280 wide, H.264 CRF 26, no audio, `-movflags +faststart`; the poster is the frame at 2 s.
 
