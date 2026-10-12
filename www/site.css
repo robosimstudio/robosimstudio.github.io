@@ -41,37 +41,38 @@ sup { font-size: 0.68em; line-height: 0; }
 .pill svg { width: 16px; height: 16px; }
 
 /* ---- title, authors */
-.hero { padding: 32px 0 20px; text-align: center; }
-.hero > .wrap { display: grid; justify-items: center; gap: 12px; }
-.hero .logos { margin: 10px 0 6px; }
-.logos { display: flex; align-items: center; justify-content: center; gap: 34px; flex-wrap: wrap; }
+.hero { padding: 28px 0 8px; }
+.hero > .wide { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 36px; align-items: center; }
+.hero .words { display: grid; justify-items: start; gap: 12px; text-align: left; }
+.hero .logos { margin: 8px 0 0; }
+.logos { display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
 .logos a { display: block; line-height: 0; }
 .logos img { display: block; width: auto; }
 .logos .autolab { height: 30px; } .logos .berkeley { height: 36px; } .logos .nvidia { height: 28px; }
-.hero h1 { font-size: clamp(38px, 6.4vw, 64px); line-height: 1.02; font-weight: 800; letter-spacing: -0.03em; }
-.subtitle { font: 700 clamp(16px, 1.9vw, 20px)/1.35 var(--display); color: var(--ink); margin: 0 0 6px; max-width: 60ch; letter-spacing: -0.01em; }
-.hero .teaser { width: min(100%, 960px); margin-top: 6px; }
+.hero h1 { font-size: clamp(36px, 4.6vw, 56px); line-height: 1.02; font-weight: 800; letter-spacing: -0.03em; }
+.subtitle { font: 700 clamp(16px, 1.5vw, 19px)/1.35 var(--display); color: var(--ink); margin: 0 0 4px; max-width: 48ch; letter-spacing: -0.01em; }
+.hero .teaser { width: 100%; }
 .hero .teaser video { aspect-ratio: 16 / 9; }
-.authors { margin: 4px 0 0; font-size: 14.5px; line-height: 1.65; max-width: 74ch; }
+.authors { margin: 2px 0 0; font-size: 14px; line-height: 1.6; max-width: 70ch; }
 .authors span { white-space: nowrap; }
 .authors sup { color: var(--muted); }
 .affils { color: var(--muted); font-size: 13px; margin: 0; }
 .affils span { white-space: nowrap; }
-.links { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; justify-content: center; }
+.links { display: flex; gap: 10px; margin-top: 8px; flex-wrap: wrap; }
 
 /* ---- the workflow: a tall section; its content sticks while the page scrolls through the four steps */
 .flow { position: relative; height: 540vh; }
 .flow .sticky { position: sticky; top: 0; height: 100vh; height: 100svh; display: flex; align-items: center; }
-.flow .wide, .gallery .wide { width: min(1320px, calc(100% - 32px)); }
+.hero .wide, .flow .wide, .gallery .wide { width: min(1320px, calc(100% - 32px)); }
 
 /* the lead: one sentence for the step, above the board */
-.lead { min-height: 58px; margin-bottom: 14px; }
-.lead p { margin: 0; font-size: 17px; line-height: 1.5; color: var(--ink); max-width: 110ch; display: none; }
+.lead { grid-column: 2; grid-row: 1; min-height: 54px; margin-bottom: 12px; }
+.lead p { margin: 0; font-size: 16.5px; line-height: 1.5; color: var(--ink); display: none; }
 .lead p b { font-weight: 800; }
 .flow[data-step="1"] .lead > [data-step="1"], .flow[data-step="2"] .lead > [data-step="2"], .flow[data-step="3"] .lead > [data-step="3"], .flow[data-step="4"] .lead > [data-step="4"], .flow[data-step="5"] .lead > [data-step="5"] { display: block; }
 
 /* the rail: five numbered steps down the left, joined by a line; the current one filled, the ones passed ticked; step 4 on fire */
-.rail { list-style: none; margin: 0; padding: 4px 0 0; display: flex; flex-direction: column; gap: 26px; grid-column: 1; grid-row: 1 / span 2; }
+.rail { list-style: none; margin: 0; padding: 4px 0 0; display: flex; flex-direction: column; gap: 26px; grid-column: 1; grid-row: 1 / span 3; }
 .rail li { position: relative; }
 .rail li:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 36px; bottom: -24px; width: 2px; background: var(--line); }
 .rail li.done::after { background: var(--ink); }
@@ -100,7 +101,7 @@ sup { font-size: 0.68em; line-height: 0; }
 /* the board: the rail down the left, the stage with its row of tools under it, and on step 4 the task snapshots beside it */
 .board { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 0 22px; align-items: start; }
 .flow[data-step="4"] .board { grid-template-columns: 180px minmax(0, 1fr) 190px; }
-.thumbs { display: none; flex-direction: column; gap: 10px; grid-column: 3; grid-row: 1; }
+.thumbs { display: none; flex-direction: column; gap: 10px; grid-column: 3; grid-row: 2; }
 .flow[data-step="4"] .thumbs { display: flex; }
 .thumbs button { display: grid; gap: 6px; padding: 5px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--muted); font: 700 13.5px/1.2 var(--display); cursor: pointer; text-align: left; }
 .thumbs button img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; }
@@ -109,7 +110,7 @@ sup { font-size: 0.68em; line-height: 0; }
 .thumbs button[aria-selected="true"] { border-color: var(--hot); color: var(--ink); }
 
 /* the stage: the panel of the current step shows, the others wait behind it; it keeps 16:9 and fits the window's height */
-.stage { position: relative; grid-column: 2; grid-row: 1; width: min(100%, calc((100svh - 200px) * 16 / 9)); margin: 0 auto; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: var(--stage); border: 1px solid var(--line); }
+.stage { position: relative; grid-column: 2; grid-row: 2; width: min(100%, calc((100svh - 200px) * 16 / 9)); margin: 0 auto; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: var(--stage); border: 1px solid var(--line); }
 .panel { position: absolute; inset: 0; margin: 0; opacity: 0; visibility: hidden; transition: opacity 0.35s ease, visibility 0s 0.35s; }
 .panel.on { opacity: 1; visibility: visible; transition: opacity 0.35s ease; }
 .panel > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -157,7 +158,7 @@ sup { font-size: 0.68em; line-height: 0; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* under the stage: the live tools (step 4) and the Next button */
-.under { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: flex-end; gap: 18px; margin-top: 12px; min-height: 44px; }
+.under { grid-column: 2; grid-row: 3; display: flex; align-items: center; justify-content: flex-end; gap: 18px; margin-top: 12px; min-height: 44px; }
 .under > [data-step] { display: none; }
 .flow[data-step="4"] .under > .tools { display: flex; }
 .next { flex: none; padding: 12px 22px; font-size: 15.5px; }
@@ -216,24 +217,28 @@ footer p { margin: 0 0 18px; }
 .cite pre { margin: 0; padding: 14px; font: 500 12.5px/1.55 var(--mono); color: var(--ink); overflow-x: auto; white-space: pre; }
 
 @media (max-width: 760px) {
-  .hero { padding: 28px 0 24px; }
+  .hero { padding: 24px 0 8px; }
+  .hero > .wide { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+  .hero .words { justify-items: center; text-align: center; }
+  .links { justify-content: center; }
+  .logos { justify-content: center; }
   .logos { gap: 20px; }
   .logos .autolab { height: 22px; } .logos .berkeley { height: 27px; } .logos .nvidia { height: 21px; }
   .subtitle br { display: none; }
   .authors { font-size: 15px; }
   .card { padding: 6px; }
   .flow { height: 520vh; }
-  .lead { min-height: 0; margin-bottom: 10px; }
+  .lead { grid-column: 1; grid-row: 1; min-height: 0; margin-bottom: 8px; }
   .lead p { font-size: 14px; }
   .board, .flow[data-step="4"] .board { grid-template-columns: minmax(0, 1fr); gap: 10px; }
-  .rail { grid-column: 1; grid-row: 1; flex-direction: row; gap: 0; padding: 0; margin-bottom: 2px; }
+  .rail { grid-column: 1; grid-row: 2; flex-direction: row; gap: 0; padding: 0; margin-bottom: 2px; }
   .rail li { flex: 1; }
   .rail li:not(:last-child)::after { top: 13px; bottom: auto; left: calc(50% + 18px); right: calc(-50% + 18px); width: auto; height: 2px; }
   .rail button { display: grid; justify-items: center; gap: 0; width: 100%; font-size: 12px; padding: 0 2px; text-align: center; }
   .rail button i { width: 28px; height: 28px; font-size: 13px; margin-bottom: 6px; }
-  .stage { grid-row: 2; grid-column: 1; width: 100%; }
-  .thumbs { grid-column: 1; grid-row: 3; }
-  .under { grid-column: 1; grid-row: 4; }
+  .stage { grid-row: 3; grid-column: 1; width: 100%; }
+  .thumbs { grid-column: 1; grid-row: 4; }
+  .under { grid-column: 1; grid-row: 5; }
   .thumbs { flex-direction: row; }
   .thumbs button { flex: 1; font-size: 12px; padding: 4px; gap: 4px; }
   .prompt { left: 6px; right: 6px; bottom: 6px; padding: 8px 10px; gap: 8px; }
