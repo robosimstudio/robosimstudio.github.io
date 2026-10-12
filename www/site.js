@@ -138,6 +138,19 @@
     const dot = $(document, ".tools .dot");
     dot.classList.toggle("up", ok);
     dot.title = ok ? "Live" : "Starting or restarting";
+    counts();
+  }
+  // how many people are on each task's page right now (the gateway's /count/<task>, a number the page rewrites
+  // every few seconds); a small badge on each snapshot, and a note on the live block's row
+  async function counts() {
+    for (const el of document.querySelectorAll(".thumbs [data-count]")) {
+      const id = el.dataset.count;
+      let n = 0;
+      try { const r = await fetch(`https://${HOST}/count/${id}`, { cache: "no-store" }); if (r.ok) n = parseInt(await r.text(), 10) || 0; } catch (e) { n = 0; }
+      el.hidden = n < 1;
+      el.textContent = n < 1 ? "" : `${n} ${n === 1 ? "person" : "people"} here`;
+      if (id === b.dataset.id) { const v = $(document, "#viewers"); v.hidden = n < 1; v.textContent = n < 1 ? "" : ` · ${n} ${n === 1 ? "person" : "people"} here`; }
+    }
   }
   poll();
   setInterval(poll, 20000);

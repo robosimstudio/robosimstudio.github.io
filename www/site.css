@@ -112,7 +112,10 @@ sup { font-size: 0.68em; line-height: 0; }
 .flow[data-step="4"] .thumbs { display: flex; }
 .thumbs button { display: grid; gap: 6px; padding: 5px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--muted); font: 700 13.5px/1.2 var(--display); cursor: pointer; text-align: left; }
 .thumbs button img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; }
-.thumbs button span { padding: 0 4px 3px; }
+.thumbs button span { padding: 0 4px 3px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.thumbs .n { font: 600 10.5px/1 var(--display); font-style: normal; color: var(--live); white-space: nowrap; }
+.thumbs .n::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--live); margin-right: 4px; vertical-align: 1px; }
+#viewers { font-style: normal; }
 .thumbs button:hover { border-color: var(--muted); color: var(--ink); }
 .thumbs button[aria-selected="true"] { border-color: var(--hot); color: var(--ink); }
 

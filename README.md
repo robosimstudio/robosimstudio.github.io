@@ -10,7 +10,8 @@ drive, with snapshots to pick which task: wipe the bar, peel the film, route the
 running it); and the gallery. The simulations
 themselves, the HTTPS gateway in front of them and the supervisors that keep them up live in
 [robosimstudio/demo](https://github.com/robosimstudio/demo); the page reaches them at
-`https://<task>.<RSW_HOST>/` and reads whether each is up from `https://<RSW_HOST>/status/<task>`
+`https://<task>.<RSW_HOST>/`, reads whether each is up from `https://<RSW_HOST>/status/<task>` and how many
+people are on it from `https://<RSW_HOST>/count/<task>`
 (the host is set at the top of `www/site.js`).
 
 Clips under `www/video/`: `teaser` (from `~/rss_ws/teaser/out/rss_teaser.mp4`), `bar_real` / `bar_gen` / `bar_out` / `bar_mech` / `bar_deploy`
