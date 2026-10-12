@@ -41,15 +41,20 @@ sup { font-size: 0.68em; line-height: 0; }
 .pill svg { width: 16px; height: 16px; }
 
 /* ---- title, authors */
-.hero { padding: 28px 0 8px; }
-.hero > .wide { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 36px; align-items: center; }
-.hero .words { display: grid; justify-items: start; gap: 12px; text-align: left; }
+/* the first view: its own screen; the workflow starts a full scroll below */
+.hero { position: relative; min-height: 100vh; min-height: 100svh; display: grid; align-content: center; padding: 40px 0 72px; }
+.hero > .wide { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); gap: 48px; align-items: center; }
+.hero .words { display: grid; justify-items: start; gap: 14px; text-align: left; }
+.hero .down { position: absolute; left: 50%; bottom: 22px; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; color: var(--muted); font: 600 13px/1 var(--display); text-decoration: none; }
+.hero .down svg { width: 22px; height: 22px; animation: bob 1.6s ease-in-out infinite; }
+.hero .down:hover { color: var(--ink); }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(5px); } }
 .hero .logos { margin: 8px 0 0; }
 .logos { display: flex; align-items: center; gap: 30px; flex-wrap: wrap; }
 .logos a { display: block; line-height: 0; }
 .logos img { display: block; width: auto; }
 .logos .autolab { height: 30px; } .logos .berkeley { height: 36px; } .logos .nvidia { height: 28px; }
-.hero h1 { font-size: clamp(36px, 4.6vw, 56px); line-height: 1.02; font-weight: 800; letter-spacing: -0.03em; }
+.hero h1 { font-size: clamp(38px, 5vw, 62px); line-height: 1.02; font-weight: 800; letter-spacing: -0.03em; }
 .subtitle { font: 700 clamp(16px, 1.5vw, 19px)/1.35 var(--display); color: var(--ink); margin: 0 0 4px; max-width: 48ch; letter-spacing: -0.01em; }
 .hero .teaser { width: 100%; }
 .hero .teaser video { aspect-ratio: 16 / 9; }
@@ -217,7 +222,7 @@ footer p { margin: 0 0 18px; }
 .cite pre { margin: 0; padding: 14px; font: 500 12.5px/1.55 var(--mono); color: var(--ink); overflow-x: auto; white-space: pre; }
 
 @media (max-width: 760px) {
-  .hero { padding: 24px 0 8px; }
+  .hero { min-height: 0; padding: 24px 0 68px; }
   .hero > .wide { grid-template-columns: minmax(0, 1fr); gap: 16px; }
   .hero .words { justify-items: center; text-align: center; }
   .links { justify-content: center; }

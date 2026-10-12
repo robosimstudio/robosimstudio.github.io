@@ -228,6 +228,7 @@
     onScroll();
   }
   addEventListener("hashchange", fromHash);
+  $(document, ".hero .down").addEventListener("click", (e) => { e.preventDefault(); goTo(1); });
   for (const a of document.querySelectorAll('a[href^="#demo="]')) a.addEventListener("click", (e) => { e.preventDefault(); history.replaceState(null, "", a.getAttribute("href")); show("bar"); goTo(4); });
   fromHash();
   // step 3's slider: the range input's value is the clip line
