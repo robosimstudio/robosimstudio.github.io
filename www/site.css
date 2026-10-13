@@ -86,7 +86,7 @@ sup { font-size: 0.68em; line-height: 0; }
 .lead p b { font-weight: 800; }
 .flow[data-step="1"] .lead > [data-step="1"], .flow[data-step="2"] .lead > [data-step="2"], .flow[data-step="3"] .lead > [data-step="3"], .flow[data-step="4"] .lead > [data-step="4"], .flow[data-step="5"] .lead > [data-step="5"] { display: block; }
 
-/* the rail: five numbered steps down the left, joined by a line; the current one filled, the ones passed ticked; step 4 on fire */
+/* the rail: five numbered steps down the left, joined by a line; the current one filled, the ones passed ticked; */
 .rail { list-style: none; margin: 0; padding: 4px 0 0; display: flex; flex-direction: column; gap: 26px; grid-column: 1; grid-row: 1 / span 3; }
 .rail li { position: relative; }
 .rail li:not(:last-child)::after { content: ""; position: absolute; left: 15px; top: 36px; bottom: -24px; width: 2px; background: var(--line); }
@@ -105,12 +105,6 @@ sup { font-size: 0.68em; line-height: 0; }
 .rail li.done button i { border-color: var(--ink); color: var(--ink); }
 .rail li.done button i::before { content: "✓"; }
 .rail li.done button i span { display: none; }
-.rail li.fire button i { border-color: var(--hot); color: var(--hot); animation: ring 1.6s ease-out infinite; }
-.rail li.fire button b { color: var(--hot); }
-.rail li.fire button[aria-current] i { background: var(--hot); border-color: var(--hot); color: #fff; animation: none; }
-@keyframes ring { 0% { box-shadow: 0 0 0 0 rgba(234, 88, 12, 0.5); } 100% { box-shadow: 0 0 0 12px rgba(234, 88, 12, 0); } }
-.pill.fire { border-color: var(--hot); color: var(--hot); }
-.pill.fire:hover { background: var(--hot); color: #fff; }
 .flow[data-step="5"] .next { display: none; }
 
 /* the board: the rail down the left, the stage with its row of tools under it, and on step 4 the task snapshots beside it */
@@ -173,16 +167,10 @@ sup { font-size: 0.68em; line-height: 0; }
 .screen > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .screen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; opacity: 0; transition: opacity 0.4s ease; }
 .live.ready .screen iframe { opacity: 1; }
-.gate {
-  position: absolute; inset: 0; z-index: 3; display: flex; align-items: flex-end; justify-content: flex-end; padding: 18px;
-  border: 0; margin: 0; background: linear-gradient(180deg, transparent 55%, rgba(10, 10, 16, 0.38)); cursor: pointer; font: inherit;
-}
-.gate span {
-  display: inline-flex; align-items: center; gap: 9px; padding: 11px 20px; border-radius: 999px; background: var(--hot); color: #fff;
-  font-weight: 700; font-size: 15px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-}
-.gate:hover span { filter: brightness(1.1); }
+.gate { position: absolute; inset: 0; z-index: 3; cursor: grab; }
 .live.active .gate { display: none; }
+.live .corner { z-index: 4; pointer-events: none; transition: opacity 0.3s ease; }
+.live.active .corner { opacity: 0; }
 .load {
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 2; width: min(320px, calc(100% - 32px));
   padding: 14px 16px; border-radius: 12px; background: var(--card); box-shadow: 0 10px 30px var(--shade); text-align: center;
@@ -200,7 +188,6 @@ sup { font-size: 0.68em; line-height: 0; }
 /* full screen (a phone, or "Full screen"): the screen covers the window, the tools float over it */
 .live.full .screen { position: fixed; inset: 0; z-index: 1000; border-radius: 0; border: 0; }
 .flow:has(.live.full) .tools { position: fixed; z-index: 1001; right: 10px; top: calc(10px + env(safe-area-inset-top)); background: var(--card); padding: 5px; border-radius: 999px; box-shadow: 0 6px 20px var(--shade); }
-.flow:has(.live.full) .tools .note, .flow:has(.live.full) .tools a { display: none; }
 
 /* ---- gallery */
 .gallery { padding: 56px 0 64px; }
@@ -248,7 +235,6 @@ footer p { margin: 0 0 18px; }
   .panel.cmp .handle i { width: 32px; height: 32px; font-size: 16px; line-height: 32px; }
   .under { flex-direction: column; align-items: stretch; gap: 10px; margin-top: 10px; }
   .next { justify-content: center; }
-  .tools .note { display: none; }
   .gallery { padding-bottom: 44px; }
 }
 /* a phone or a touch screen: the block is the clip and the button; the 3D replay opens full screen */

@@ -5,8 +5,9 @@
 // orbits, zooms and scrubs. The picker under it swaps the task. Recordings: demo/tools/record_preview.py --rollout.
 // - It loads when scrolled into view (a third of it showing). On a phone (or any touch screen) it does not
 //   load in the page at all: the block shows its clip and the button, and the replay opens full screen.
-// - Until a visitor presses the button a gate lies over it, so the page scrolls past the replay instead of
-//   its camera eating the wheel or the swipe. On a desktop the gate comes back when the pointer leaves the block.
+// - An invisible gate lies over it, so the wheel scrolls the page instead of zooming the replay. Pressing the
+//   gate lifts it and hands the same press to the replay, so the first drag already turns the view; the gate
+//   comes back when the pointer leaves the block. On a phone a tap opens the replay full screen.
 (() => {
   // each task's opening camera: the framing of its clip (record_preview.py prints it)
   const VIEWS = {
@@ -68,7 +69,19 @@
     document.body.classList.remove("locked");
     if (small()) disconnect();  // back to the clip: no 3D page in a phone-wide block
   }
-  $(b, ".gate").addEventListener("click", drive);
+  $(b, ".gate").addEventListener("pointerdown", (e) => {
+    const loaded = s.frame && b.classList.contains("ready");
+    drive();
+    if (small() || !loaded) return;
+    // hand the press to the replay's canvas (same origin), so this drag already turns the view
+    const r = s.frame.getBoundingClientRect(), doc = s.frame.contentDocument;
+    const x = e.clientX - r.left, y = e.clientY - r.top, el = doc && doc.elementFromPoint(x, y);
+    if (!el) return;
+    const init = { bubbles: true, cancelable: true, clientX: x, clientY: y, button: e.button, buttons: e.buttons,
+                   pointerId: e.pointerId, pointerType: e.pointerType, isPrimary: true, view: s.frame.contentWindow };
+    el.dispatchEvent(new s.frame.contentWindow.PointerEvent("pointerdown", init));
+    el.dispatchEvent(new s.frame.contentWindow.MouseEvent("mousedown", init));
+  });
   $(document, ".tools .expand").addEventListener("click", () => {
     if (b.classList.contains("full")) { release(); return; }
     drive();
@@ -100,13 +113,11 @@
       v.poster = `video/${id}.jpg`;
       v.src = `video/${id}.mp4`;
       v.play().catch(() => {});
-      $(document, ".tools a.open").href = url(id);
       if (s.ratio >= 0.34 && !small()) connect();
     }
     for (const t of tabs) t.setAttribute("aria-selected", String(t.dataset.demo === id));
   }
   for (const t of tabs) t.addEventListener("click", () => { show(t.dataset.demo); history.replaceState(null, "", `#demo=${t.dataset.demo}`); });
-  $(document, ".tools a.open").href = url(b.dataset.id);
 
   // ---- the prompt, typed out once it scrolls into view
   const prompt = $(document, "#prompt"), typed = $(document, "#typed"), src = $(document, "#prompt-src").content;
@@ -145,7 +156,7 @@
   const flow = $(document, "#workflow"), stage = $(document, "#stage");
   const panels = [...stage.querySelectorAll(".panel")], steps = [...document.querySelectorAll(".rail [data-step]")];
   const next = $(document, "#next");
-  const NEXT = { 1: "Next: the coding agent at work", 2: "Next: the simulation it produced", 3: "Next: explore it in 3D 🔥", 4: "Next: Sim2Real" };
+  const NEXT = { 1: "Next: the coding agent at work", 2: "Next: the simulation it produced", 3: "Next: the simulation in 3D", 4: "Next: Sim2Real" };
   const N = steps.length;
   let step = 0, typedOnce = false;
   const vh = () => innerHeight;
