@@ -76,6 +76,11 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <p data-step="2">A Claude or Codex agent builds the simulation from the video: the scene, the camera and the physics, in about an hour (Real2Sim).</p>
           <p data-step="3">The output is a multi-physics simulation: rigid bodies in Newton coupled with the FEM sponge in SuperDex, which humans and agents inspect and tune until it matches the video.</p>
           <p data-step="4">A rollout of the simulation in 3D: drag to look around, or pick another task.</p>
+          <div class="tasks" role="tablist" aria-label="Choose a task">
+            <button type="button" role="tab" data-demo="bar" aria-selected="true">Wipe the bar</button>
+            <button type="button" role="tab" data-demo="peel" aria-selected="false">Peel the film</button>
+            <button type="button" role="tab" data-demo="cable" aria-selected="false">Route the cable</button>
+          </div>
           <p data-step="5">Varied in its physical parameters and layout, the simulation improves a <a href="https://graph-robots.github.io/gap/" target="_blank" rel="noopener">Graph-as-Policy</a> from feedback, and the policy runs on the real robot (Sim2Real).</p>
         </div>
         <ol class="rail" aria-label="Steps">
@@ -118,11 +123,6 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <span class="corner">REAL ROBOT</span>
             <video src="video/bar_deploy.mp4" poster="video/bar_deploy.jpg" muted loop playsinline preload="metadata"></video>
           </figure>
-        </div>
-        <div class="thumbs" role="tablist" aria-label="Choose a task">
-          <button type="button" role="tab" data-demo="bar" aria-selected="true"><img src="video/bar.jpg" alt=""><span>Wipe the bar</span></button>
-          <button type="button" role="tab" data-demo="peel" aria-selected="false"><img src="video/peel.jpg" alt=""><span>Peel the film</span></button>
-          <button type="button" role="tab" data-demo="cable" aria-selected="false"><img src="video/cable.jpg" alt=""><span>Route the cable</span></button>
         </div>
         <div class="under">
           <div class="tools" data-step="4"><div class="scrub" role="slider" aria-label="Rollout time" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><i></i></div><button class="close" type="button">Close</button></div>

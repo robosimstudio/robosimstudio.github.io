@@ -13,13 +13,14 @@
 //   on the gate is handed through, so the first drag already turns the view. Leaving the block, or the page
 //   scrolling, gives the wheel and the keys back to the page. On a phone a tap opens the replay full screen.
 (() => {
-  // each task's opening camera: from beyond the work, facing the robots, so the arms never block it (the
-  // peel from higher: the phone leans back toward the robots, and its glass only reads from above)
+  // each task's opening camera: its clip's framing (record_preview.py), backed off along the same line of sight
+  // (bar 1.6x, the clip being a close-up on the sponge; peel 1.35x; cable 1.25x) so the whole task is in view
   const VIEWS = {
-    bar: { position: [0.95, 0.08, 1.2], look_at: [0.6, -0.08, 0.92] },
-    peel: { position: [0.69, -0.07, 1.25], look_at: [0.48, -0.09, 0.81] },
-    cable: { position: [0.82, 0.22, 1.05], look_at: [0.55, -0.02, 0.79] },
+    bar: { position: [0.2576, -0.1137, 1.0996], look_at: [0.6, -0.1035, 0.9258] },
+    peel: { position: [0.2148, 0.0, 1.1205], look_at: [0.525, 0.0, 0.8602] },
+    cable: { position: [0.9659, 0.0201, 1.022], look_at: [0.54, 0.0201, 0.7599] },
   };
+
 
   const url = (id) => `viser/?embedded&playbackPath=../rollouts/${id}.viser` +
     `&initialCameraPosition=${VIEWS[id].position}&initialCameraLookAt=${VIEWS[id].look_at}&initialCameraUp=0,0,1`;
@@ -143,7 +144,7 @@
   watch.observe(b);
 
   // the picker: which task the block shows
-  const tabs = [...document.querySelectorAll(".thumbs [data-demo]")];
+  const tabs = [...document.querySelectorAll(".tasks [data-demo]")];
   function show(id) {
     if (!TITLES[id]) return;
     if (b.dataset.id !== id) {
