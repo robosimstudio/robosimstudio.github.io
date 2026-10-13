@@ -1,67 +1,54 @@
-// The project page: the typed prompt, the five-step stage (four clips and the live demo), the citation.
+// The project page: the typed prompt, the five-step stage (four clips and the 3D replay), the citation.
 //
-// The live block (.live[data-id], step 4) embeds a task's viser page from its own subdomain; the picker under it
-// swaps which task (bar, peel, cable) the block shows.
-// - It connects when scrolled into view (a third of it showing) and lets go once it has been out of
-//   view for RELEASE_MS: no hidden streams, no held driver's seat. On a phone (or any touch screen)
-//   it does not connect in the page at all: the block shows its clip and the Drive button, and the
-//   live page loads only when Drive opens it full screen, and goes again on Close.
-// - Until a visitor presses "Drive the robot" a gate lies over it, so the page scrolls past the
-//   simulation instead of the simulation's camera eating the wheel or the swipe. On a desktop the
-//   gate comes back when the pointer leaves the block; on a phone the demo opens full screen.
-// - The loading bar fills on the frame's load event, and completes when the page in the frame
-//   posts {rsw: "ready"} (pages.ready_ping: once this viewer's scene has been sent).
+// The 3D block (.live[data-id], step 4) plays a recorded rollout of a task (bar, peel, cable) in viser's static
+// client (viser/index.html, built by viser-build-client), from rollouts/<task>.viser: no server, the visitor
+// orbits, zooms and scrubs. The picker under it swaps the task. Recordings: demo/tools/record_preview.py --rollout.
+// - It loads when scrolled into view (a third of it showing). On a phone (or any touch screen) it does not
+//   load in the page at all: the block shows its clip and the button, and the replay opens full screen.
+// - Until a visitor presses the button a gate lies over it, so the page scrolls past the replay instead of
+//   its camera eating the wheel or the swipe. On a desktop the gate comes back when the pointer leaves the block.
 (() => {
-  const HOST = "64-247-206-118.sslip.io";  // the GPU box behind the live demos (demo/up.sh, RSW_HOST)
-  const url = (id) => `https://${id}.${HOST}/`;
-  const RELEASE_MS = 20000, SLOW_MS = 20000;
+  // each task's opening camera: the framing of its clip (record_preview.py prints it)
+  const VIEWS = {
+    bar: { position: [0.386, -0.1099, 1.0344], look_at: [0.6, -0.1035, 0.9258] },
+    peel: { position: [0.2952, 0.0, 1.053], look_at: [0.525, 0.0, 0.8602] },
+    cable: { position: [0.8807, 0.0201, 0.9696], look_at: [0.54, 0.0201, 0.7599] },
+  };
+  const url = (id) => `viser/?playbackPath=../rollouts/${id}.viser` +
+    `&initialCameraPosition=${VIEWS[id].position}&initialCameraLookAt=${VIEWS[id].look_at}&initialCameraUp=0,0,1`;
   const small = () => matchMedia("(pointer: coarse), (max-width: 760px)").matches;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const $ = (root, sel) => root.querySelector(sel);
 
-  // ---- the live block
+  // ---- the 3D block
   const b = $(document, ".live[data-id]");
-  const s = { frame: null, ratio: 0, outSince: null, slow: 0, fade: 0 };
+  const s = { frame: null, ratio: 0, fade: 0 };
   const TITLES = { bar: "Wipe the bar", peel: "Peel the film", cable: "Route the cable" };
 
-  function progress(f, msg) {
-    $(b, ".lbar i").style.width = `${Math.round(f * 100)}%`;
-    if (msg) $(b, ".lmsg").textContent = msg;
-  }
   function connect() {
     if (s.frame) return;
     const f = document.createElement("iframe");
-    f.title = `${b.dataset.title}: live simulation`;
-    f.allow = "fullscreen; clipboard-write";
-    f.addEventListener("load", () => { if (s.frame === f && !b.classList.contains("ready")) progress(0.9, "Sending the scene…"); });
+    f.title = `${b.dataset.title}: 3D replay`;
+    f.allow = "fullscreen";
+    f.addEventListener("load", () => {
+      if (s.frame !== f) return;
+      clearTimeout(s.fade);
+      s.fade = setTimeout(() => { b.classList.add("ready"); b.classList.remove("connecting"); }, 600);
+    });
     s.frame = f;
     b.classList.add("connecting");
     b.classList.remove("ready");
-    progress(0.15, "Connecting to the simulation…");
-    clearTimeout(s.slow);
-    s.slow = setTimeout(() => { if (!b.classList.contains("ready")) progress(0.9, "Still starting up; this simulation may be restarting."); }, SLOW_MS);
     f.src = url(b.dataset.id);
     $(b, ".screen").appendChild(f);
-    requestAnimationFrame(() => progress(0.45));
   }
   function disconnect() {
     if (!s.frame) return;
     release();
     s.frame.remove();
     s.frame = null;
-    clearTimeout(s.slow);
-    b.classList.remove("connecting", "ready");
-    progress(0, "");
-  }
-  function ready() {
-    clearTimeout(s.slow);
-    progress(1, "Ready");
     clearTimeout(s.fade);
-    s.fade = setTimeout(() => { b.classList.add("ready"); b.classList.remove("connecting"); }, 350);
+    b.classList.remove("connecting", "ready");
   }
-  addEventListener("message", (e) => {
-    if (e.data && e.data.rsw === "ready" && s.frame && s.frame.contentWindow === e.source) ready();
-  });
 
   function drive() {
     connect();
@@ -79,10 +66,9 @@
     $(document, ".tools .expand").textContent = "Full screen";
     $(b, ".gate").removeAttribute("aria-hidden");
     document.body.classList.remove("locked");
-    if (small()) disconnect();  // back to the clip: no live page in a phone-wide block
+    if (small()) disconnect();  // back to the clip: no 3D page in a phone-wide block
   }
   $(b, ".gate").addEventListener("click", drive);
-  $(document, ".tools .close").addEventListener("click", release);
   $(document, ".tools .expand").addEventListener("click", () => {
     if (b.classList.contains("full")) { release(); return; }
     drive();
@@ -95,17 +81,12 @@
   b.addEventListener("mouseenter", () => clearTimeout(leave));
   addEventListener("keydown", (e) => { if (e.key === "Escape") release(); });
 
-  // the block is only visible on step 4: the observer sees ratio 0 on the other steps, so it connects
-  // when step 4 is shown in view, and lets go a while after another step (or the page's end) hides it
+  // the block is only visible on step 4: the observer sees ratio 0 on the other steps, so it loads when step 4 shows
   const watch = new IntersectionObserver(([e]) => {
     s.ratio = e.intersectionRatio;
-    s.outSince = e.intersectionRatio > 0 ? null : (s.outSince || Date.now());
     if (e.intersectionRatio >= 0.34 && !small()) connect();
   }, { threshold: [0, 0.1, 0.34, 0.6, 1] });
   watch.observe(b);
-  setInterval(() => {
-    if (s.frame && s.outSince && Date.now() - s.outSince > RELEASE_MS && !b.classList.contains("active")) disconnect();
-  }, 4000);
 
   // the picker: which task the block shows
   const tabs = [...document.querySelectorAll(".thumbs [data-demo]")];
@@ -120,40 +101,12 @@
       v.src = `video/${id}.mp4`;
       v.play().catch(() => {});
       $(document, ".tools a.open").href = url(id);
-      $(document, ".tools .dot").dataset.status = id;
       if (s.ratio >= 0.34 && !small()) connect();
     }
     for (const t of tabs) t.setAttribute("aria-selected", String(t.dataset.demo === id));
-    poll();
   }
   for (const t of tabs) t.addEventListener("click", () => { show(t.dataset.demo); history.replaceState(null, "", `#demo=${t.dataset.demo}`); });
   $(document, ".tools a.open").href = url(b.dataset.id);
-
-  // which simulation answers: the gateway's status route says 204 (up) or 502 (down or restarting)
-  async function poll() {
-    const id = b.dataset.id;
-    let ok = false;
-    try { ok = (await fetch(`https://${HOST}/status/${id}`, { cache: "no-store" })).ok; } catch (e) { ok = false; }
-    if (b.dataset.id !== id) return;
-    const dot = $(document, ".tools .dot");
-    dot.classList.toggle("up", ok);
-    dot.title = ok ? "Live" : "Starting or restarting";
-    counts();
-  }
-  // how many people are on each task's page right now (the gateway's /count/<task>, a number the page rewrites
-  // every few seconds); a small badge on each snapshot, and a note on the live block's row
-  async function counts() {
-    for (const el of document.querySelectorAll(".thumbs [data-count]")) {
-      const id = el.dataset.count;
-      let n = 0;
-      try { const r = await fetch(`https://${HOST}/count/${id}`, { cache: "no-store" }); if (r.ok) n = parseInt(await r.text(), 10) || 0; } catch (e) { n = 0; }
-      el.hidden = n < 1;
-      el.textContent = n < 1 ? "" : `${n} ${n === 1 ? "person" : "people"} here`;
-      if (id === b.dataset.id) { const v = $(document, "#viewers"); v.hidden = n < 1; v.textContent = n < 1 ? "" : ` · ${n} ${n === 1 ? "person" : "people"} here`; }
-    }
-  }
-  poll();
-  setInterval(poll, 20000);
 
   // ---- the prompt, typed out once it scrolls into view
   const prompt = $(document, "#prompt"), typed = $(document, "#typed"), src = $(document, "#prompt-src").content;
@@ -192,7 +145,7 @@
   const flow = $(document, "#workflow"), stage = $(document, "#stage");
   const panels = [...stage.querySelectorAll(".panel")], steps = [...document.querySelectorAll(".rail [data-step]")];
   const next = $(document, "#next");
-  const NEXT = { 1: "Next: the coding agent at work", 2: "Next: the simulation it produced", 3: "Next: drive it yourself 🔥", 4: "Next: Sim2Real" };
+  const NEXT = { 1: "Next: the coding agent at work", 2: "Next: the simulation it produced", 3: "Next: explore it in 3D 🔥", 4: "Next: Sim2Real" };
   const N = steps.length;
   let step = 0, typedOnce = false;
   const vh = () => innerHeight;

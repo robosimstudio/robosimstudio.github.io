@@ -9,7 +9,7 @@
 
 :root {
   --ink: #17191e; --muted: #626673; --line: #e4e4e8; --bg: #ffffff; --card: #ffffff; --stage: #ececef;
-  --link: #1a56db; --hot: #ea580c; --live: #16a34a; --wait: #a1a1aa; --shade: rgba(20, 22, 30, 0.10);
+  --link: #1a56db; --hot: #ea580c; --shade: rgba(20, 22, 30, 0.10);
   --dark: #15161b; --dark-line: #2b2d36; --dark-ink: #eef0f5; --green: #8fd694;
   --display: "Manrope", "Helvetica Neue", Arial, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -121,9 +121,6 @@ sup { font-size: 0.68em; line-height: 0; }
 .thumbs button { display: grid; gap: 6px; padding: 5px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--muted); font: 700 13.5px/1.2 var(--display); cursor: pointer; text-align: left; }
 .thumbs button img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; }
 .thumbs button span { padding: 0 4px 3px; display: flex; justify-content: space-between; align-items: center; gap: 6px; }
-.thumbs .n { font: 600 10.5px/1 var(--display); font-style: normal; color: var(--live); white-space: nowrap; }
-.thumbs .n::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--live); margin-right: 4px; vertical-align: 1px; }
-#viewers { font-style: normal; }
 .thumbs button:hover { border-color: var(--muted); color: var(--ink); }
 .thumbs button[aria-selected="true"] { border-color: var(--hot); color: var(--ink); }
 
@@ -171,7 +168,7 @@ sup { font-size: 0.68em; line-height: 0; }
 .flow[data-step="4"] .under > .tools { display: flex; }
 .next { flex: none; padding: 12px 22px; font-size: 15.5px; }
 
-/* the live block, step 4 */
+/* the 3D block, step 4 */
 .live .screen { position: absolute; inset: 0; overflow: hidden; background: var(--stage); }
 .screen > video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .screen iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; display: block; opacity: 0; transition: opacity 0.4s ease; }
@@ -192,24 +189,18 @@ sup { font-size: 0.68em; line-height: 0; }
   transition: opacity 0.35s ease; pointer-events: none;
 }
 .live:not(.connecting) .load { opacity: 0; }
-.load .lmsg { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
-.lbar { height: 6px; border-radius: 999px; background: var(--line); overflow: hidden; }
-.lbar i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: 999px; transition: width 0.4s ease; }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--wait); flex: none; display: inline-block; }
-.dot.up { background: var(--live); }
-/* the live block's tools: in the row under the stage; in full screen they float at the window's top right */
+.load .lmsg { margin: 0; font-size: 14px; color: var(--muted); }
+/* the 3D block's tools: in the row under the stage; in full screen they float at the window's top right */
 .tools { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); flex: none; white-space: nowrap; }
 .tools button, .tools a {
   font: inherit; font-weight: 700; color: var(--ink); background: var(--card); border: 1px solid var(--line); border-radius: 999px;
   padding: 5px 12px; cursor: pointer; text-decoration: none;
 }
 .tools button:hover, .tools a:hover { border-color: var(--ink); }
-.close { display: none; }
-.live.active .close { display: inline-block; }
 /* full screen (a phone, or "Full screen"): the screen covers the window, the tools float over it */
 .live.full .screen { position: fixed; inset: 0; z-index: 1000; border-radius: 0; border: 0; }
 .flow:has(.live.full) .tools { position: fixed; z-index: 1001; right: 10px; top: calc(10px + env(safe-area-inset-top)); background: var(--card); padding: 5px; border-radius: 999px; box-shadow: 0 6px 20px var(--shade); }
-.flow:has(.live.full) .tools .note, .flow:has(.live.full) .tools .close, .flow:has(.live.full) .tools .dot, .flow:has(.live.full) .tools a { display: none; }
+.flow:has(.live.full) .tools .note, .flow:has(.live.full) .tools a { display: none; }
 
 /* ---- gallery */
 .gallery { padding: 56px 0 64px; }
@@ -260,7 +251,7 @@ footer p { margin: 0 0 18px; }
   .tools .note { display: none; }
   .gallery { padding-bottom: 44px; }
 }
-/* a phone or a touch screen: the block is the clip and the Drive button; the live page opens full screen */
+/* a phone or a touch screen: the block is the clip and the button; the 3D replay opens full screen */
 @media (pointer: coarse), (max-width: 760px) {
   .live:not(.full) .screen iframe, .live:not(.full) .load { display: none; }
   .flow:not(:has(.live.full)) .tools .expand { display: none; }
