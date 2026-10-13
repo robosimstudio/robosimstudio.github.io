@@ -11,10 +11,10 @@
 //   gate lifts it and hands the same press to the replay, so the first drag already turns the view; the gate
 //   comes back when the pointer leaves the block. On a phone a tap opens the replay full screen.
 (() => {
-  // each task's opening camera: the framing of its clip (record_preview.py prints it)
+  // each task's opening camera (bar, cable: their clips' framing; peel: wide enough for the carry to the mat)
   const VIEWS = {
     bar: { position: [0.386, -0.1099, 1.0344], look_at: [0.6, -0.1035, 0.9258] },
-    peel: { position: [0.2952, 0.0, 1.053], look_at: [0.525, 0.0, 0.8602] },
+    peel: { position: [0.75, -0.05, 1.19], look_at: [0.5, -0.07, 0.83] },  // from beyond the phone: the peel and the mat
     cable: { position: [0.8807, 0.0201, 0.9696], look_at: [0.54, 0.0201, 0.7599] },
   };
   const url = (id) => `viser/?embedded&playbackPath=../rollouts/${id}.viser` +
