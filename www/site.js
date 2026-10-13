@@ -2,7 +2,9 @@
 //
 // The 3D block (.live[data-id], step 4) plays a recorded rollout of a task (bar, peel, cable) in viser's static
 // client (viser/index.html, built by viser-build-client), from rollouts/<task>.viser: no server, the visitor
-// orbits, zooms and scrubs. The picker under it swaps the task. Recordings: demo/tools/record_preview.py --rollout.
+// orbits and zooms. The picker under it swaps the task. Recordings: demo/tools/record_preview.py --rollout.
+// The client runs ?embedded (scripts/viser-embed.patch): it draws no controls of its own, posts
+// {viser: "time", t, d} as it plays, and takes {viser: "seek" | "play" | "pause"}: the bar under the stage.
 // - It loads when scrolled into view (a third of it showing). On a phone (or any touch screen) it does not
 //   load in the page at all: the block shows its clip and the button, and the replay opens full screen.
 // - An invisible gate lies over it, so the wheel scrolls the page instead of zooming the replay. Pressing the
@@ -15,7 +17,7 @@
     peel: { position: [0.2952, 0.0, 1.053], look_at: [0.525, 0.0, 0.8602] },
     cable: { position: [0.8807, 0.0201, 0.9696], look_at: [0.54, 0.0201, 0.7599] },
   };
-  const url = (id) => `viser/?playbackPath=../rollouts/${id}.viser` +
+  const url = (id) => `viser/?embedded&playbackPath=../rollouts/${id}.viser` +
     `&initialCameraPosition=${VIEWS[id].position}&initialCameraLookAt=${VIEWS[id].look_at}&initialCameraUp=0,0,1`;
   const small = () => matchMedia("(pointer: coarse), (max-width: 760px)").matches;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -23,7 +25,8 @@
 
   // ---- the 3D block
   const b = $(document, ".live[data-id]");
-  const s = { frame: null, ratio: 0, fade: 0 };
+  const s = { frame: null, ratio: 0, fade: 0, dur: 0, scrubbing: false };
+  const bar = $(document, ".tools .scrub");
   const TITLES = { bar: "Wipe the bar", peel: "Peel the film", cable: "Route the cable" };
 
   function connect() {
@@ -49,7 +52,38 @@
     s.frame = null;
     clearTimeout(s.fade);
     b.classList.remove("connecting", "ready");
+    s.dur = 0;
+    setBar(0);
   }
+
+  // the bar under the stage: how far the rollout has played; press or drag it to seek
+  function setBar(f) {
+    $(bar, "i").style.width = `${(f * 100).toFixed(2)}%`;
+    bar.setAttribute("aria-valuenow", String(Math.round(f * 100)));
+  }
+  const tell = (msg) => { if (s.frame && s.frame.contentWindow) s.frame.contentWindow.postMessage(msg, "*"); };
+  addEventListener("message", (e) => {
+    const m = e.data;
+    if (!m || m.viser !== "time" || !s.frame || e.source !== s.frame.contentWindow) return;
+    s.dur = m.d;
+    if (!s.scrubbing && m.d > 0) setBar(m.t / m.d);
+  });
+  function seek(e) {
+    const r = bar.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
+    setBar(f);
+    tell({ viser: "seek", t: f * s.dur });
+  }
+  bar.addEventListener("pointerdown", (e) => {
+    if (!s.dur) return;
+    s.scrubbing = true;
+    bar.setPointerCapture(e.pointerId);
+    tell({ viser: "pause" });
+    seek(e);
+  });
+  bar.addEventListener("pointermove", (e) => { if (s.scrubbing) seek(e); });
+  const endScrub = () => { if (!s.scrubbing) return; s.scrubbing = false; tell({ viser: "play" }); };
+  bar.addEventListener("pointerup", endScrub);
+  bar.addEventListener("pointercancel", endScrub);
 
   function drive() {
     connect();
@@ -57,14 +91,12 @@
     if (small()) {
       b.classList.add("full");
       document.body.classList.add("locked");
-      $(document, ".tools .expand").textContent = "Close";
     }
     $(b, ".gate").setAttribute("aria-hidden", "true");
   }
   function release() {
     if (!b.classList.contains("active")) return;
     b.classList.remove("active", "full");
-    $(document, ".tools .expand").textContent = "Full screen";
     $(b, ".gate").removeAttribute("aria-hidden");
     document.body.classList.remove("locked");
     if (small()) disconnect();  // back to the clip: no 3D page in a phone-wide block
@@ -82,13 +114,7 @@
     el.dispatchEvent(new s.frame.contentWindow.PointerEvent("pointerdown", init));
     el.dispatchEvent(new s.frame.contentWindow.MouseEvent("mousedown", init));
   });
-  $(document, ".tools .expand").addEventListener("click", () => {
-    if (b.classList.contains("full")) { release(); return; }
-    drive();
-    b.classList.add("full");
-    document.body.classList.add("locked");
-    $(document, ".tools .expand").textContent = "Exit full screen";
-  });
+  $(document, ".tools .close").addEventListener("click", release);
   let leave = 0;
   b.addEventListener("mouseleave", () => { if (!b.classList.contains("full") && !small()) leave = setTimeout(release, 500); });
   b.addEventListener("mouseenter", () => clearTimeout(leave));

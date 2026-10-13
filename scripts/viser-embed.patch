@@ -1,0 +1,67 @@
+--- a/src/FilePlayback.tsx
++++ b/src/FilePlayback.tsx
+@@ -152,6 +152,9 @@
+   const [playbackSpeed, setPlaybackSpeed] = useState("1x");
+   const [paused, setPaused] = useState(false);
+   const [recording, setRecording] = useState<SerializedMessages | null>(null);
++  // ?embedded: no controls of our own; the parent page drives play/seek by postMessage
++  // ({viser: "seek", t}, {viser: "play"}, {viser: "pause"}) and hears {viser: "time", t, d, paused}.
++  const embedded = new URLSearchParams(window.location.search).has("embedded");
+ 
+   // Instead of removing all of the existing scene nodes, we're just going to hide them.
+   // This will prevent unnecessary remounting when messages are looped.
+@@ -274,6 +277,44 @@
+     };
+   }, [paused]); // Empty dependency array ensures this runs once on mount and cleanup on unmount
+ 
++  const seekTo = useCallback(
++    (value: number) => {
++      if (value < playbackMutable.current.currentTime) {
++        resetScene();
++        playbackMutable.current.currentIndex = 0;
++      }
++      playbackMutable.current.currentTime = value;
++      setCurrentTime(value);
++      updatePlayback();
++    },
++    [recording, updatePlayback],
++  );
++
++  useEffect(() => {
++    if (!embedded) return;
++    function onMessage(event: MessageEvent) {
++      const m = event.data;
++      if (event.source !== window.parent || !m || typeof m.viser !== "string") return;
++      if (m.viser === "seek" && typeof m.t === "number") seekTo(m.t);
++      else if (m.viser === "play") setPaused(false);
++      else if (m.viser === "pause") setPaused(true);
++    }
++    window.addEventListener("message", onMessage);
++    return () => window.removeEventListener("message", onMessage);
++  }, [seekTo]);
++
++  const lastPost = useRef(0);
++  useEffect(() => {
++    if (!embedded || recording === null || window.parent === window) return;
++    const now = performance.now();
++    if (now - lastPost.current < 30 && !paused) return;
++    lastPost.current = now;
++    window.parent.postMessage(
++      { viser: "time", t: currentTime, d: recording.durationSeconds, paused },
++      "*",
++    );
++  }, [currentTime, paused, recording]);
++
+   const updateCurrentTime = useCallback(
+     (value: number) => {
+       if (value < playbackMutable.current.currentTime) {
+@@ -323,7 +364,8 @@
+           maxWidth: "95%",
+           zIndex: 1,
+           padding: "0.5em",
+-          display: recording.durationSeconds === 0.0 ? "none" : "flex",
++          display:
++            embedded || recording.durationSeconds === 0.0 ? "none" : "flex",
+           alignItems: "center",
+           justifyContent: "space-between",
+           gap: "0.375em",

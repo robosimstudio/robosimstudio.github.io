@@ -8,23 +8,25 @@ the left (the input clip with the prompt to a coding agent,
 the agent at work, the simulation it produced under a slider between its two views, a recorded rollout of
 that simulation in 3D, with snapshots to pick which task: wipe the bar, peel the film, route the cable, and the
 real robot running it); and the gallery. The 3D step needs no server: `www/viser/index.html` is viser's static
-client (`viser-build-client`, version in `www/viser/VERSION`), and it plays `www/rollouts/<task>.viser`, so the
-visitor orbits, zooms and scrubs a replay of the real simulation. Each task's opening camera is in `VIEWS` at the
-top of `www/site.js`.
+client with `scripts/viser-embed.patch` (built by `scripts/build_viser.sh`; version in `www/viser/VERSION`): with
+`?embedded` it draws no controls of its own and the page draws the progress bar under the stage, talking to it by
+`postMessage`. It plays `www/rollouts/<task>.viser`, a replay of the real simulation the visitor can orbit and
+zoom. Each task's opening camera is in `VIEWS` at the top of `www/site.js`.
 
-To re-record a rollout (the simulations live in [robosimstudio/demo](https://github.com/robosimstudio/demo)),
-start the task with `RSW_RECORD` and drive it with the clip recorder's `--rollout`, which also re-makes the poster
-clip and prints the camera for `VIEWS`. Wait for the page's pre-roll (`[handles] a hand` in its log) first:
+The rollouts are scripted (`rollouts.py` in [robosimstudio/demo](https://github.com/robosimstudio/demo)): the bar
+wiped stroke after stroke, the film peeled off and fluttered, the cable routed and looped round a clip. To
+re-record one, start its task with `RSW_RECORD` and `RSW_PROGRAM` and keep one viewer on the page (it only steps
+with a viewer); the page runs the program once its pre-roll is done and writes the file at its last step:
 
 ```bash
 cd ~/rss_ws/RoboSimStudio
-RSW_PROBE=/tmp/probe_bar.json RSW_RECORD=/tmp/bar.viser RSW_REC_NO_WORDS=1 CUDA_VISIBLE_DEVICES=5 \
+RSW_RECORD=/tmp/bar.viser RSW_PROGRAM=1 CUDA_VISIBLE_DEVICES=5 \
     .venv/bin/python ~/website_ws/demo/launch.py --task bar --name bar_rec --port 8124 --attract 0
-~/rss_ws/trailer/.venv-tools/bin/python ~/website_ws/demo/tools/record_preview.py bar http://localhost:8124 \
-    /tmp/probe_bar.json www/video --rollout /tmp/bar.viser && cp /tmp/bar.viser www/rollouts/
+# open http://localhost:8124 in a browser and leave it; then: cp /tmp/bar.viser www/rollouts/
 ```
 
-A recording only plays in the client of the viser version that wrote it: rebuild `www/viser/` when viser moves.
+A recording only plays in the client of the viser version that wrote it: rebuild `www/viser/` (`scripts/build_viser.sh`)
+and re-record when viser moves.
 
 Clips under `www/video/`: `teaser` (from `~/rss_ws/teaser/out/rss_teaser.mp4`), `bar_real` / `bar_gen` / `bar_out` / `bar_mech` / `bar_deploy`
 (the workflow: the phone video, the agent's hour as the 40x timelapse with its timer overlay from
