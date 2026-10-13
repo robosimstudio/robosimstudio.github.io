@@ -7,16 +7,20 @@
 // {viser: "time", t, d} as it plays, and takes {viser: "seek" | "play" | "pause"}: the bar under the stage.
 // - It loads when scrolled into view (a third of it showing). On a phone (or any touch screen) it does not
 //   load in the page at all: the block shows its clip and the button, and the replay opens full screen.
-// - An invisible gate lies over it, so the wheel scrolls the page instead of zooming the replay. Pressing the
-//   gate lifts it and hands the same press to the replay, so the first drag already turns the view; the gate
-//   comes back when the pointer leaves the block. On a phone a tap opens the replay full screen.
+// - An invisible gate lies over it while the page scrolls, so scrolling down the page never gets caught in the
+//   replay. The moment the mouse really moves over it (not the still pointer the page scrolls under), the gate
+//   lifts and the replay takes focus: the wheel zooms it and W/A/S/D move its camera, no click needed. A press
+//   on the gate is handed through, so the first drag already turns the view. Leaving the block, or the page
+//   scrolling, gives the wheel and the keys back to the page. On a phone a tap opens the replay full screen.
 (() => {
-  // each task's opening camera (bar, cable: their clips' framing; peel: wide enough for the carry to the mat)
+  // each task's opening camera: from beyond the work, facing the robots, so the arms never block it (the
+  // peel from higher: the phone leans back toward the robots, and its glass only reads from above)
   const VIEWS = {
-    bar: { position: [0.386, -0.1099, 1.0344], look_at: [0.6, -0.1035, 0.9258] },
-    peel: { position: [0.75, -0.05, 1.19], look_at: [0.5, -0.07, 0.83] },  // from beyond the phone: the peel and the mat
-    cable: { position: [0.8807, 0.0201, 0.9696], look_at: [0.54, 0.0201, 0.7599] },
+    bar: { position: [0.95, 0.08, 1.2], look_at: [0.6, -0.08, 0.92] },
+    peel: { position: [0.69, -0.07, 1.25], look_at: [0.48, -0.09, 0.81] },
+    cable: { position: [0.82, 0.22, 1.05], look_at: [0.55, -0.02, 0.79] },
   };
+
   const url = (id) => `viser/?embedded&playbackPath=../rollouts/${id}.viser` +
     `&initialCameraPosition=${VIEWS[id].position}&initialCameraLookAt=${VIEWS[id].look_at}&initialCameraUp=0,0,1`;
   const small = () => matchMedia("(pointer: coarse), (max-width: 760px)").matches;
@@ -93,12 +97,14 @@
       document.body.classList.add("locked");
     }
     $(b, ".gate").setAttribute("aria-hidden", "true");
+    if (s.frame && !small()) s.frame.focus({ preventScroll: true });  // its keys (W/A/S/D) without a click
   }
   function release() {
     if (!b.classList.contains("active")) return;
     b.classList.remove("active", "full");
     $(b, ".gate").removeAttribute("aria-hidden");
     document.body.classList.remove("locked");
+    if (s.frame && document.activeElement === s.frame) s.frame.blur();  // the page's keys again
     if (small()) disconnect();  // back to the clip: no 3D page in a phone-wide block
   }
   $(b, ".gate").addEventListener("pointerdown", (e) => {
@@ -115,6 +121,15 @@
     el.dispatchEvent(new s.frame.contentWindow.MouseEvent("mousedown", init));
   });
   $(document, ".tools .close").addEventListener("click", release);
+  // hover to explore: real mouse movement over the gate lifts it (a scroll under a still pointer makes
+  // movement-less mousemoves, and those keep it down)
+  let moved = 0;
+  $(b, ".gate").addEventListener("pointermove", (e) => {
+    if (e.pointerType !== "mouse" || small() || !s.frame) return;
+    moved += Math.abs(e.movementX) + Math.abs(e.movementY);
+    if (moved > 6) { moved = 0; drive(); }
+  });
+  addEventListener("scroll", () => { moved = 0; if (b.classList.contains("active") && !b.classList.contains("full")) release(); }, { passive: true });
   let leave = 0;
   b.addEventListener("mouseleave", () => { if (!b.classList.contains("full") && !small()) leave = setTimeout(release, 500); });
   b.addEventListener("mouseenter", () => clearTimeout(leave));
