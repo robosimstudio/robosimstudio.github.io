@@ -10,7 +10,7 @@
  
    // Instead of removing all of the existing scene nodes, we're just going to hide them.
    // This will prevent unnecessary remounting when messages are looped.
-@@ -274,6 +277,44 @@
+@@ -274,6 +277,53 @@
      };
    }, [paused]); // Empty dependency array ensures this runs once on mount and cleanup on unmount
  
@@ -35,6 +35,15 @@
 +      if (m.viser === "seek" && typeof m.t === "number") seekTo(m.t);
 +      else if (m.viser === "play") setPaused(false);
 +      else if (m.viser === "pause") setPaused(true);
++      else if (m.viser === "camera") {
++        // {viser: "camera", position, look_at, up, fov (rad)}: the camera set as a server would set it, for
++        // filming the replay from a camera of the page's choosing (in the scene's own world frame)
++        const q = viewerMutable.messageQueue;
++        if (m.up) q.push({ type: "SetCameraUpDirectionMessage", position: m.up, initial: false } as any);
++        if (m.position) q.push({ type: "SetCameraPositionMessage", position: m.position, initial: false } as any);
++        if (m.look_at) q.push({ type: "SetCameraLookAtMessage", look_at: m.look_at, initial: false } as any);
++        if (typeof m.fov === "number") q.push({ type: "SetCameraFovMessage", fov: m.fov, initial: false } as any);
++      }
 +    }
 +    window.addEventListener("message", onMessage);
 +    return () => window.removeEventListener("message", onMessage);
@@ -55,7 +64,7 @@
    const updateCurrentTime = useCallback(
      (value: number) => {
        if (value < playbackMutable.current.currentTime) {
-@@ -323,7 +364,8 @@
+@@ -323,7 +373,8 @@
            maxWidth: "95%",
            zIndex: 1,
            padding: "0.5em",

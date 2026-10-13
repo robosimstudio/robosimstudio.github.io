@@ -75,7 +75,7 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
           <p data-step="1"><b>RoboSimStudio</b> takes a smartphone video of a robot performing a task, here wiping a bar with a sponge, and a one-line prompt to a coding agent.</p>
           <p data-step="2">A Claude or Codex agent builds the simulation from the video: the scene, the camera and the physics, in about an hour (Real2Sim).</p>
           <p data-step="3">The output is a multi-physics simulation: rigid bodies in Newton coupled with the FEM sponge in SuperDex, which humans and agents inspect and tune until it matches the video.</p>
-          <p data-step="4">A rollout of the simulation in 3D: drag to look around, or pick another task.</p>
+          <p data-step="4">See a rollout of the simulation. Use <kbd>A</kbd> <kbd>W</kbd> <kbd>S</kbd> <kbd>D</kbd> and drag to look around!</p>
           <div class="tasks" role="tablist" aria-label="Choose a task">
             <button type="button" role="tab" data-demo="bar" aria-selected="true">Wipe the bar</button>
             <button type="button" role="tab" data-demo="peel" aria-selected="false">Peel the film</button>
@@ -123,6 +123,10 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
             <span class="corner">REAL ROBOT</span>
             <video src="video/bar_deploy.mp4" poster="video/bar_deploy.jpg" muted loop playsinline preload="metadata"></video>
           </figure>
+        </div>
+        <div class="cams" data-step="4" aria-label="The robot's cameras">
+          <figure><video data-cam="overhead" src="rollouts/bar.overhead.mp4" muted loop autoplay playsinline preload="auto"></video><span class="corner">OVERHEAD</span></figure>
+          <figure><video data-cam="wrist" src="rollouts/bar.wrist.mp4" muted loop autoplay playsinline preload="auto"></video><span class="corner">WRIST</span></figure>
         </div>
         <div class="under">
           <div class="tools" data-step="4"><div class="scrub" role="slider" aria-label="Rollout time" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><i></i></div><button class="close" type="button">Close</button></div>
