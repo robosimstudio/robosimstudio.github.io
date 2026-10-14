@@ -72,19 +72,7 @@
     if (!m || m.viser !== "time" || !s.frame || e.source !== s.frame.contentWindow) return;
     s.dur = m.d;
     if (!s.scrubbing && m.d > 0) setBar(m.t / m.d);
-    syncCams(m.t, m.paused || s.scrubbing);
   });
-  // the right column: the overhead and wrist films of the same take, kept on the replay's clock (they loop on
-  // their own until a replay is talking: before it loads, and on a phone before the tap)
-  const cams = [...document.querySelectorAll(".cams video")];
-  function syncCams(t, still) {
-    for (const v of cams) {
-      if (!(v.readyState >= 1)) continue;
-      const off = Math.abs(v.currentTime - t);
-      if (still) { if (!v.paused) v.pause(); if (off > 0.03) v.currentTime = t; }
-      else { if (v.paused) v.play().catch(() => {}); if (off > 0.2) v.currentTime = t; }
-    }
-  }
   function seek(e) {
     const r = bar.getBoundingClientRect(), f = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width));
     setBar(f);
@@ -156,7 +144,7 @@
   watch.observe(b);
 
   // the picker: which task the block shows
-  const tabs = [...document.querySelectorAll(".tasks [data-demo]")];
+  const tabs = [...document.querySelectorAll(".thumbs [data-demo]")];
   function show(id) {
     if (!TITLES[id]) return;
     if (b.dataset.id !== id) {
@@ -167,7 +155,6 @@
       v.poster = `video/${id}.jpg`;
       v.src = `video/${id}.mp4`;
       v.play().catch(() => {});
-      for (const c of cams) { c.src = `rollouts/${id}.${c.dataset.cam}.mp4`; c.play().catch(() => {}); }
       if (s.ratio >= 0.34 && !small()) connect();
     }
     for (const t of tabs) t.setAttribute("aria-selected", String(t.dataset.demo === id));
@@ -234,7 +221,6 @@
     }
     if (step < N) $(next, "span").textContent = NEXT[step];
     if (step !== 4) release();
-    for (const v of cams) { if (step === 4) v.play().catch(() => {}); else v.pause(); }  // only on their step
     if (step === 1 && !typedOnce) { typedOnce = true; type(); }
   }
   function goTo(n) { scrollTo({ top: where(n), behavior: reduced ? "auto" : "smooth" }); }

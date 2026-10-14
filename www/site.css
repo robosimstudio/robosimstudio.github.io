@@ -107,13 +107,15 @@ sup { font-size: 0.68em; line-height: 0; }
 .rail li.done button i span { display: none; }
 .flow[data-step="5"] .next { display: none; }
 
-/* the board: the rail down the left, the stage with its row of tools under it; on step 4 the task tabs in the lead, over the stage */
+/* the board: the rail down the left, the stage with its row of tools under it; on step 4 the task snapshots beside it */
 .board { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 0 22px; align-items: start; }
-.tasks { display: none; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
-.flow[data-step="4"] .tasks { display: flex; }
-.tasks button { font: 700 14px/1 var(--display); padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--muted); cursor: pointer; }
-.tasks button:hover { color: var(--ink); border-color: var(--muted); }
-.tasks button[aria-selected="true"] { background: var(--ink); border-color: var(--ink); color: var(--card); }
+.thumbs { display: none; flex-direction: column; gap: 10px; grid-column: 3; grid-row: 2; }
+.flow[data-step="4"] .thumbs { display: flex; }
+.thumbs button { display: grid; gap: 6px; padding: 5px; border-radius: 12px; border: 2px solid var(--line); background: var(--card); color: var(--muted); font: 700 13.5px/1.2 var(--display); cursor: pointer; text-align: left; }
+.thumbs button img { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 8px; }
+.thumbs button span { padding: 0 4px 3px; }
+.thumbs button:hover { border-color: var(--muted); color: var(--ink); }
+.thumbs button[aria-selected="true"] { border-color: var(--hot); color: var(--ink); }
 
 /* the stage: the panel of the current step shows, the others wait behind it; it keeps 16:9 and fits the window's height */
 .stage { position: relative; grid-column: 2; grid-row: 2; width: min(100%, calc((100svh - 200px) * 16 / 9)); margin: 0 auto; aspect-ratio: 16 / 9; border-radius: 14px; overflow: hidden; background: var(--stage); border: 1px solid var(--line); }
@@ -154,14 +156,7 @@ sup { font-size: 0.68em; line-height: 0; }
 @keyframes blink { 50% { opacity: 0; } }
 
 /* under the stage: the 3D block's bar (step 4) and the Next button */
-.flow[data-step="4"] .stage { width: min(100%, calc((100svh - 246px) * 16 / 9)); }  /* room for the tabs */
-/* step 4's right column: the robot's own cameras, in step with the replay */
-.flow[data-step="4"] .board { grid-template-columns: 180px minmax(0, 1fr) 240px; }
-.cams { display: none; grid-column: 3; grid-row: 2; flex-direction: column; gap: 10px; }
-.flow[data-step="4"] .cams { display: flex; }
-.cams figure { position: relative; margin: 0; aspect-ratio: 4 / 3; border-radius: 12px; overflow: hidden; background: var(--stage); border: 1px solid var(--line); }
-.cams video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-.cams .corner { top: 8px; left: 8px; font-size: 10.5px; padding: 4px 7px; }
+.flow[data-step="4"] .board { grid-template-columns: 180px minmax(0, 1fr) 190px; }  /* the task snapshots */
 .under { grid-column: 2; grid-row: 3; display: flex; align-items: center; justify-content: flex-end; gap: 18px; margin-top: 12px; min-height: 44px; }
 .under > [data-step] { display: none; }
 .flow[data-step="4"] .under > .tools { display: flex; }
@@ -229,8 +224,6 @@ footer p { margin: 0 0 18px; }
   .card { padding: 6px; }
   .flow { height: 520vh; }
   .lead { grid-column: 1; grid-row: 2; min-height: 0; margin-bottom: 8px; }  /* under the rail: the tabs sit on the stage */
-  .tasks { gap: 5px; flex-wrap: nowrap; }
-  .tasks button { font-size: 12px; padding: 7px 10px; white-space: nowrap; }
   .lead p { font-size: 14px; }
   .board, .flow[data-step="4"] .board { grid-template-columns: minmax(0, 1fr); gap: 10px; }
   .rail { grid-column: 1; grid-row: 1; flex-direction: row; gap: 0; padding: 0; margin-bottom: 2px; }
@@ -240,8 +233,8 @@ footer p { margin: 0 0 18px; }
   .rail button i { width: 28px; height: 28px; font-size: 13px; margin-bottom: 6px; }
   .stage { grid-row: 3; grid-column: 1; width: 100%; }
   .under { grid-column: 1; grid-row: 5; }
-  .cams { grid-column: 1; grid-row: 4; flex-direction: row; }
-  .cams figure { flex: 1; }
+  .thumbs { grid-column: 1; grid-row: 4; flex-direction: row; }
+  .thumbs button { flex: 1; font-size: 12px; padding: 4px; gap: 4px; }
   .prompt { left: 6px; right: 6px; bottom: 6px; padding: 8px 10px; gap: 8px; }
   .prompt .chip { display: none; }
   .ptext { font-size: 11.5px; line-height: 1.4; }
