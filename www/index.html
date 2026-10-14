@@ -53,8 +53,8 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- the teaser, 58 s -->
     <div class="card teaser"><video src="video/teaser.mp4" poster="video/teaser.jpg" controls muted loop playsinline autoplay preload="metadata"></video></div>
     <div class="links">
-      <!-- TODO: paper link (arXiv) once public -->
-      <a class="pill primary" href="#" aria-disabled="true"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10H3z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7.5h5M5.5 10h5M5.5 12.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Paper</a>
+      <!-- The paper is served from here (www/robosimstudio.pdf) until arXiv lists it. -->
+      <a class="pill primary" href="robosimstudio.pdf" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M3 1.5h7l3 3v10H3z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M5.5 7.5h5M5.5 10h5M5.5 12.5h3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>Paper</a>
       <a class="pill" href="https://github.com/robosimstudio/robosimstudio/tree/main" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .5a7.5 7.5 0 0 0-2.37 14.62c.37.07.51-.16.51-.36v-1.3c-2.09.45-2.53-1-2.53-1-.34-.86-.83-1.09-.83-1.09-.68-.47.05-.46.05-.46.75.05 1.15.78 1.15.78.67 1.15 1.76.82 2.19.63.07-.49.26-.82.48-1.01-1.67-.19-3.42-.84-3.42-3.71 0-.82.29-1.49.77-2.02-.08-.19-.34-.95.07-1.98 0 0 .63-.2 2.06.77a7.1 7.1 0 0 1 3.76 0c1.43-.97 2.06-.77 2.06-.77.41 1.03.15 1.79.07 1.98.48.53.77 1.2.77 2.02 0 2.88-1.75 3.51-3.42 3.7.27.23.51.69.51 1.39v2.06c0 .2.14.44.52.36A7.5 7.5 0 0 0 8 .5z" fill="currentColor"/></svg>Code</a>
       <a class="pill" href="https://github.com/robosimstudio/robosimstudio/tree/main/examples/09_demos" target="_blank" rel="noopener"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="1.5" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9.5" y="1.5" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="1.5" y="9.5" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9.5" y="9.5" width="5" height="5" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>Real2Sim examples</a>
       <a class="pill" href="#demo=bar"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1.5l6 3.25v6.5L8 14.5l-6-3.25v-6.5z M2 4.75l6 3.25 6-3.25 M8 8v6.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>3D rollouts</a>
@@ -146,11 +146,12 @@ height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <p>Open source under the <a href="https://github.com/robosimstudio/robosimstudio/blob/main/LICENSE" target="_blank" rel="noopener">Apache 2.0 license</a>.</p>
     <div class="cite">
       <div class="cite-bar"><span>Citation</span><button class="copy" type="button">Copy</button></div>
-<!-- TODO: venue and URL once the paper is public -->
+<!-- TODO: venue and arXiv identifier once listed -->
 <pre id="bibtex">@article{chen2026robosimstudio,
   title   = {RoboSimStudio: An Interactive Toolkit for Rapid Real2Sim of Robot Manipulation Tasks},
   author  = {Chen, Kaiyuan and Xie, Shuangyu and Yoo, Uksang and Zhu, Xinyue and Magner, Cael and Zhu, Alvin and Kim, Daehwa and Heiden, Eric and Coumans, Erwin and Macklin, Miles and Huang, Spencer and Goldberg, Ken},
-  year    = {2026}
+  year    = {2026},
+  url     = {https://robosimstudio.github.io/robosimstudio.pdf}
 }</pre>
     </div>
   </div>

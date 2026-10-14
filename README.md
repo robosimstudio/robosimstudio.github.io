@@ -38,6 +38,7 @@ New clips: 1280 wide, H.264 CRF 26, no audio, `-movflags +faststart`; the poster
 | path | what |
 |---|---|
 | `www/` | the page: `index.html`, `site.js`, `site.css`, fonts, logos, its clips under `video/`, the 3D replays under `rollouts/` and their player under `viser/` |
+| `www/robosimstudio.pdf` | the paper, behind the Paper button until arXiv lists it: `make` in `~/rss_ws/RoboSimStudio-draft`, then copy its `main.pdf` here |
 | `scripts/stamp.py` | run by the Pages workflow: every file link gets a content hash, so no cache pairs a new page with old files |
 | `.github/workflows/pages.yml` | publishes `www/` on every push to `main` |
 | `site/`, `pipeline/`, `scripts/deploy.sh` | the drag demos (see below); not part of the published page yet |
